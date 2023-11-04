@@ -2,6 +2,8 @@ package common.network.math;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.NetworkMatricies;
 import common.network.TrainingSet;
 
@@ -183,7 +185,7 @@ public class NetworkMath
 		return output;
 	}
 	
-	public static float[][] scale(float[][] a, float c)
+	public static double[][] scale(double[][] a, double c)
 	{
 		for(int i = 0; i < a.length; i++)
 		{
@@ -195,9 +197,9 @@ public class NetworkMath
 		return a;
 	}	
 	
-	public static float[][] multiplyAB(float[][] a, float[][] b)
+	public static double[][] multiplyAB(double[][] a, double[][] b)
 	{
-		float[][] output = new float[a.length][b[0].length];
+		double[][] output = new double[a.length][b[0].length];
 		if(a[0].length != b.length)
 		{
 			throw new IllegalArgumentException("The matrixes are the wrong size, dumbass");
@@ -216,9 +218,9 @@ public class NetworkMath
 		return output;
 	}
 	
-	public static float[][] multiplyABT(float[][] a, float[][] b)
+	public static double[][] multiplyABT(double[][] a, double[][] b)
 	{
-		float[][] output = new float[a.length][b.length];
+		double[][] output = new double[a.length][b.length];
 		if(a[0].length != b[0].length)
 		{
 			throw new IllegalArgumentException("The matrixes are the wrong size, dumbass");
@@ -537,5 +539,18 @@ public class NetworkMath
 			return quadraticCost.gradient(errors, weights, activations);
 		}
 
+	}
+	
+	public static int argmax(SimpleMatrix matrix)
+	{
+		int index = -1;
+		double max = Double.NEGATIVE_INFINITY;
+		for(int i = 0; i < matrix.getNumCols(); i++)
+			if(matrix.get(i) > max)
+			{
+				max = matrix.get(i);
+				index = i;
+			}
+		return index;
 	}
 }

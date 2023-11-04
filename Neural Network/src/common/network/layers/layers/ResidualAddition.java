@@ -1,6 +1,6 @@
 package common.network.layers.layers;
 
-import common.network.math.NetworkMath;
+import org.ejml.simple.SimpleMatrix;
 
 public class ResidualAddition extends Layer {
 
@@ -12,17 +12,15 @@ public class ResidualAddition extends Layer {
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
-		lastActivation = NetworkMath.add(lastLayer.getLastActivation(), residual.getLastActivation());
-		masks = lastLayer.masks;
+	public SimpleMatrix activation(SimpleMatrix input) {
+		lastActivation = lastLayer.getLastActivation().plus(residual.getLastActivation());
 		return lastActivation;
 	}
 
 	@Override//VERIFIED
 	public void backprop() {
-		float[][] gradient = getGradient();
+		SimpleMatrix gradient = getGradient();
 		clearGradients();
-		
 		lastLayer.reportGradient(gradient);
 		residual.reportGradient(gradient);
 	}

@@ -2,9 +2,12 @@ package common.network.layers;
 
 import java.text.DecimalFormat;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.layers.EmbeddingLayer;
 import common.network.layers.layers.FlattenLayer;
 import common.network.layers.layers.InputLayer;
+import common.network.layers.layers.RotationLayer;
 import common.network.layers.layers.StandardLayer;
 import common.network.layers.models.LayersNetwork;
 
@@ -13,7 +16,7 @@ public class LayersMain {
 	public static void main(String[] args) {
 		LayersNetwork network;
 		
-		float[][][][] training = new float[256][2][8][1];
+		SimpleMatrix[][] training = new SimpleMatrix[256][2];
 		
 		for(int i = 0; i < 256; i++)
 		{
@@ -23,8 +26,8 @@ public class LayersMain {
 			{
 				out[7 - j][0] = binary.charAt(binary.length() - 1 - j) == '0' ? 0 : 1;
 			}
-			training[i][0] = out;
-			training[i][1] = out;
+			training[i][0] = new SimpleMatrix(out);
+			training[i][1] = new SimpleMatrix(out);
 			//System.out.println(arrayToString(out));
 		}
 		
@@ -32,48 +35,50 @@ public class LayersMain {
 		StandardLayer outputLayer = new StandardLayer(inputLayer, 8, Activation.SIGMOID);
 		network = new LayersNetwork(0.05f, Cost.QUADRATIC, inputLayer, outputLayer);
 		
-		System.out.println(floatMatrixToString(network.feedForward(new float[][]{{1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}}), 2));
+		network.feedForward(new SimpleMatrix(new float[][]{{1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}})).print();
 		
 		System.out.println(network);
 		
 		for(int i = 0; i < 10; i++)
 		{
-			network.epoch(training);
-			System.out.println("============================================");
-			System.out.println(network);
+			double cost = network.epoch(training);
+			//System.out.println("============================================");
+			System.out.println("Epoch " + i + ": " + cost);
 		}
 		
 		System.out.println("============================================");
 		for(int i = 0; i < 256; i++)
 		{
-			System.out.println(floatMatrixToString(network.feedForward(training[i][0]), 2));
+			network.feedForward(training[i][0]);
 		}
 		
-		float[][][][] softTraining = new float[][][][]{{{{0}}, {{1}, {0}, {0}, {0}}},
-												       {{{1}}, {{0}, {1}, {0}, {0}}},
-												       {{{2}}, {{0}, {0}, {1}, {0}}},
-												       {{{3}}, {{0}, {0}, {0}, {1}}}};
+		SimpleMatrix[][] softTraining = new SimpleMatrix[4][2];
+		
+		for(int i = 0; i < 4; i++)
+		{
+			softTraining[i][0] = SimpleMatrix.filled(1, 1, i);
+			softTraining[i][1] = SimpleMatrix.filled(1, 1, i);
+		}
 												  
         LayersNetwork softModel;
         InputLayer softIn = new InputLayer(1);
         EmbeddingLayer softMid = new EmbeddingLayer(softIn, 4, 4, false);
-        FlattenLayer softFlat = new FlattenLayer(softMid);
-        StandardLayer softOut = new StandardLayer(softFlat, 4, Activation.SOFTMAX);
-        softModel = new LayersNetwork(0.10f, Cost.CROSS_ENTROPY, softIn, softMid, softFlat, softOut);
+        //RotationLayer softFlat = new RotationLayer(softMid);
+        StandardLayer softOut = new StandardLayer(softMid, 1, Activation.SOFTMAX_DEPTHWISE);
+        softModel = new LayersNetwork(0.10f, Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY, softIn, softMid, softOut);
         
         System.out.println(softModel);
 		
 		for(int i = 0; i < 20; i++)
 		{
-			softModel.epoch(softTraining);
-			System.out.println("============================================");
-			System.out.println(softModel);
+			double cost = softModel.epoch(softTraining);
+			System.out.println("Epoch " + i + ": " + cost);
 		}
 		
 		System.out.println("============================================");
 		for(int i = 0; i < 4; i++)
 		{
-			System.out.println(floatMatrixToString(softModel.feedForward(softTraining[i][0]), 2));
+			softModel.feedForward(softTraining[i][0]);
 		}
 	}
 	

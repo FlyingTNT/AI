@@ -1,5 +1,7 @@
 package common.network.layers.layers;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.models.LayersNetwork;
 
 public class TransformerInput extends Layer {
@@ -19,11 +21,11 @@ public class TransformerInput extends Layer {
 	}
 	
 	@Override
-	public float[][] activation(float[][] input) {
+	public SimpleMatrix activation(SimpleMatrix input) {
 		this.input.activation(input);
 		embedding.activation(null);
 		positionalEncoding.activation(input);
-		return positionalEncoding.lastActivation;
+		return positionalEncoding.getLastActivation();
 	}
 
 	@Override
@@ -43,12 +45,12 @@ public class TransformerInput extends Layer {
 	}
 	
 	@Override
-	public void reportGradient(float[][] gradient) {
+	public void reportGradient(SimpleMatrix gradient) {
 		embedding.reportGradient(gradient);
 	}
 	
 	@Override
-	public float[][] getLastActivation() {
+	public SimpleMatrix getLastActivation() {
 		return positionalEncoding.getLastActivation();
 	}
 	

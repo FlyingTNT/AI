@@ -1,5 +1,7 @@
 package common.network.layers.models;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.Cost;
 import common.network.layers.layers.Layer;
 
@@ -24,38 +26,22 @@ public class LayersNetwork {
 			layers[i].setModel(this);
 		}
 	}
-
-	public void backprop(float[][] input, float[][] targetOutput)
-	{
-		//FEED FORWARD
-		float[][] out = feedForward(input);
-		
-		//BACKPROP
-		float[][] dCostdActivation = cost.derivative(out, targetOutput);
-
-		model[model.length - 1].reportGradient(dCostdActivation);
-		for(int i = model.length - 1; i >= 0; i--)
-		{
-			model[i].backprop();
-		}
-		return;
-	}
 	
-	public float epoch(float[][][]... trainingSet)
+	public float epoch(SimpleMatrix[]... trainingSet)
 	{
 		float avgCost = 0;
 		if(trainingSet[0].length != 2)
 		{
 			throw new IllegalArgumentException("Training set's second dimension must be 2!");
 		}
-		if(trainingSet[0][0].length != inputs)
+		if(trainingSet[0][0].getNumRows() != inputs)
 		{
 			throw new IllegalArgumentException("Training set's inputs must equal the network's input dimension!");
 		}
-		if(trainingSet[0][1].length != outputs)
+		/*if(trainingSet[0][1].getNumRows() != outputs)
 		{
 			throw new IllegalArgumentException("Training set's outputs must equal the network's output dimension!");
-		}
+		}*/
 		
 		for(int i = 0; i < trainingSet.length; i++)
 		{
@@ -66,7 +52,7 @@ public class LayersNetwork {
 			}
 			
 			avgCost += cost.cost(model[model.length - 1].getLastActivation(), trainingSet[i][1]);
-			float[][] backin = cost.derivative(model[model.length - 1].getLastActivation(), trainingSet[i][1]);
+			SimpleMatrix backin = cost.derivative(model[model.length - 1].getLastActivation(), trainingSet[i][1]);
 			model[model.length - 1].reportGradient(backin);
 			for(int j = model.length - 1; j >= 0; j--)
 			{
@@ -76,9 +62,9 @@ public class LayersNetwork {
 		return avgCost / trainingSet.length;
 	}
 	
-	public float[][] feedForward(float[][] input)
+	public SimpleMatrix feedForward(SimpleMatrix input)
 	{
-		float[][] out = input;
+		SimpleMatrix out = input;
 		for(int i = 0; i < model.length; i++)
 		{
 			out = model[i].activation(out);
@@ -86,7 +72,7 @@ public class LayersNetwork {
 		return out;
 	}
 	
-	public float getLearningRate() {
+	public double getLearningRate() {
 		return learningRate;
 	}
 	

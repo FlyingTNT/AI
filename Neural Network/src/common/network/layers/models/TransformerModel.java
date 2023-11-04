@@ -2,9 +2,11 @@ package common.network.layers.models;
 
 import java.util.ArrayList;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.Activation;
 import common.network.layers.Cost;
-import common.network.layers.LayersMain;
+import common.network.layers.TransMain;
 import common.network.layers.layers.Decoder;
 import common.network.layers.layers.Encoder;
 import common.network.layers.layers.Layer;
@@ -87,7 +89,7 @@ public class TransformerModel extends LayersNetwork{
 	}
 	
 	@Override
-	public float epoch(float[][][]... trainingSet) 
+	public float epoch(SimpleMatrix[]... trainingSet) 
 	{//Training set: [item number][input/target][i/o position axis 0][i/o position axis 1]
 		decoders[0].setMasking(true);
 		float costSum = 0;
@@ -95,6 +97,8 @@ public class TransformerModel extends LayersNetwork{
 		{
 			encoderIn.activation(trainingSet[i][0]);
 			decoderIn.activation(shift(trainingSet[i][1], BOS));
+			//System.out.println("Decoder In:");
+			//shift(trainingSet[i][1], BOS).print();
 			
 			for(int j = 0; j < encoders.length; j++)
 			{
@@ -107,49 +111,52 @@ public class TransformerModel extends LayersNetwork{
 			outputLinear.activation(null);
 			output.activation(null);
 			
-			float[][] modelOut = output.getLastActivation();
+			SimpleMatrix modelOut = output.getLastActivation();
+			
+			//System.out.println("Decoder Out:");
+			//modelOut.print();
 			
 			costSum += cost.cost(modelOut, trainingSet[i][1]);
 			
-			float[][] lastErrorIn = cost.derivative(modelOut, trainingSet[i][1]);
+			SimpleMatrix lastErrorIn = cost.derivative(modelOut, trainingSet[i][1]);
+			
+			//lastErrorIn.print();
 			
 			output.reportGradient(lastErrorIn);
+			
+			//System.out.println("===========BACK============ ");
 			
 			for(int j = model.length - 1; j >= 0; j--)
 			{
 				model[j].backprop();
 			}
+			//int s = 0/0;
 		}
 		
 		return costSum / trainingSet.length;
 	}
 	
 	@Override
-	public float[][] feedForward(float[][] input) {
+	public SimpleMatrix feedForward(SimpleMatrix input) {
 		encoderIn.activation(input);
 		decoders[0].setMasking(false);
 		decoderIn.setMasking(false);
 		
-		System.out.println("Inferencing:");
-		LayersMain.print(input);
+		//System.out.println("Inferencing:");
+		//input.print();
 		
 		for(int i = 0; i < encoders.length; i++)
 		{
 			encoders[i].activation(null);
 		}
 		
-		float[][] currentIn = new float[sequenceLength+1][1];
-		currentIn[0][0] = BOS;
-		///*
-		for(int i = 1; i < sequenceLength+1; i++)
-		{
-			currentIn[i][0] = -1;
-		}//*/
+		SimpleMatrix currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+		currentIn.set(0, BOS);
 		
 		for(int i = 0; i < sequenceLength; i++)
 		{
-			System.out.println("\nDecoder input:");
-			LayersMain.print(currentIn);
+			//System.out.println("\nDecoder input:");
+			//currentIn.print();
 			decoderIn.activation(currentIn);
 			for(int j = 0; j < decoders.length; j++)
 			{
@@ -160,16 +167,16 @@ public class TransformerModel extends LayersNetwork{
 			outputLinear.activation(null);
 			output.activation(null);
 			
-			System.out.println("\nDecoder Output:");
-			LayersMain.print(output.getLastActivation());
+			//System.out.println("\nDecoder Output:");
+			//output.getLastActivation().print();
 			
-			int newToken = NetworkMath.argmax(output.getLastActivation()[i]);
-			currentIn[i+1][0] = newToken;
+			int newToken = NetworkMath.argmax(output.getLastActivation().getRow(i));
+			currentIn.set(i+1, newToken);
 		}
 		return currentIn;
 	}
 	
-	public void test(float[][][]... trainingSet)
+	public void test(SimpleMatrix[]... trainingSet)
 	{
 		System.out.println("===============TESTING===============");
 		decoders[0].setMasking(false);
@@ -180,10 +187,10 @@ public class TransformerModel extends LayersNetwork{
 			decoderIn.activation(shift(trainingSet[i][1], BOS));//DECODER IN
 			
 			System.out.println("\nEncoder in:");
-			LayersMain.print(trainingSet[i][0]);
+			trainingSet[i][0].print();
 			
 			System.out.println("\nDecoder in:");
-			LayersMain.print(trainingSet[i][1]);
+			trainingSet[i][1].print();
 			
 			for(int j = 0; j < encoders.length; j++)
 			{
@@ -195,22 +202,24 @@ public class TransformerModel extends LayersNetwork{
 			outputLinear.activation(null);
 			output.activation(null);
 			
-			float[][] modelOut = output.getLastActivation();
+			SimpleMatrix modelOut = output.getLastActivation();
 			
 			System.out.println("\nModel Out:");
-			LayersMain.print(modelOut);
+			modelOut.print();
 			
 			System.out.print("Cost: ");
 			
-			System.out.println(cost.cost(modelOut, trainingSet[i][1]));
+			double costVal = cost.cost(modelOut, trainingSet[i][1]);
 			
-			costSum += cost.cost(modelOut, trainingSet[i][1]);
+			System.out.println(costVal);
+			
+			costSum += costVal;
 		}
 		
 		System.out.println("\nTotal Cost: " + costSum / trainingSet.length);
 	}
 	
-	public float[][] beamSearch(float[][] input, int width)
+	public SimpleMatrix beamSearch(SimpleMatrix input, int width)
 	{
 		encoderIn.activation(input);
 		decoders[0].setMasking(false);
@@ -221,40 +230,34 @@ public class TransformerModel extends LayersNetwork{
 			encoders[i].activation(null);
 		}
 		
-		float[][] currentIn = new float[sequenceLength+1][1];
-		currentIn[0][0] = BOS;
-		///*
-		for(int i = 1; i < sequenceLength+1; i++)
-		{
-			currentIn[i][0] = -1;
-		}//*/
+		SimpleMatrix currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+		currentIn.set(0, BOS);
 		
-		float[][][] currentBest = new float[width][sequenceLength + 1][1];
+		SimpleMatrix[] currentBest = new SimpleMatrix[width];
 		Double[] currentProbabilities = new Double[width];
-		float[][] out = doDecoder(currentIn);
+		SimpleMatrix out = doDecoder(currentIn);
 		
-		ArrayList<float[][]> best = new ArrayList<>();
+		ArrayList<SimpleMatrix> best = new ArrayList<>();
 		ArrayList<Double> topProbabilities = new ArrayList<>();
 		
-		best.add(null);
-		topProbabilities.add(Double.NEGATIVE_INFINITY);
+		for(int i = 0; i < width; i++)
+		{
+			best.add(null);
+			topProbabilities.add(Double.NEGATIVE_INFINITY);
+		}
 		
 		for(int i = 0; i < vocabSize; i++)
 		{
 			for(int j = 0; j < width; j++)
 			{
-				if(Math.log(out[0][i]) > topProbabilities.get(j) || topProbabilities.get(j) == Double.NEGATIVE_INFINITY)
+				if(Math.log(out.get(0, i)) > topProbabilities.get(j) || topProbabilities.get(j) == Double.NEGATIVE_INFINITY)
 				{
-					currentIn = new float[sequenceLength+1][1];
-					currentIn[0][0] = BOS;
-					currentIn[1][0] = i;
-					///*
-					for(int k = 2; k < sequenceLength+1; k++)
-					{
-						currentIn[k][0] = -1;
-					}//*/
+					currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+					currentIn.set(0, BOS);
+					currentIn.set(1, i);
+					
 					best.add(j, currentIn);
-					topProbabilities.add(j, Math.log(out[0][i]));
+					topProbabilities.add(j, Math.log(out.get(0, i)));
 					if(topProbabilities.size() > width)
 					{
 						best.remove(topProbabilities.size() - 1);
@@ -277,21 +280,21 @@ public class TransformerModel extends LayersNetwork{
 			
 			for(int j = 0; j < width; j++)
 			{
+				if(currentBest[j] == null)
+					continue;
 				out = doDecoder(currentBest[j]);
 				
 				for(int k = 0; k < vocabSize; k++)
 				{
-					double probability = Math.log(out[i-1][k]) + currentProbabilities[j];
+					double probability = Math.log(out.get(i-1, k)) + currentProbabilities[j];
 					
 					for(int l = 0; l < width; l++)
 					{
 						if(probability > topProbabilities.get(l) || topProbabilities.get(l) == Double.NEGATIVE_INFINITY)
 						{
 							topProbabilities.add(l, probability);
-							float[][] newArray = new float[sequenceLength+1][1];
-							for(int m = 0; m < i; m++)
-								newArray[m][0] = currentBest[j][m][0];
-							newArray[i][0] = k;
+							SimpleMatrix newArray = currentBest[j].copy();
+							newArray.set(i, 0, k);
 							best.add(l, newArray);
 							if(topProbabilities.size() > width)
 							{
@@ -317,7 +320,7 @@ public class TransformerModel extends LayersNetwork{
 		return currentBest[0];
 	}
 	
-	private float[][] doDecoder(float[][] input)
+	private SimpleMatrix doDecoder(SimpleMatrix input)
 	{
 		decoderIn.activation(input);
 		for(int i = 0; i < decoders.length; i++)
@@ -328,15 +331,13 @@ public class TransformerModel extends LayersNetwork{
 		return output.getLastActivation();
 	}
 	
-	public static float[][] shift(float[][] input, int bosToken)
+	public static SimpleMatrix shift(SimpleMatrix input, int bosToken)
 	{
-		float[][] out = new float[input.length][1];
-		out[0][0] = bosToken;
-		for(int i = 1; i < input.length; i++)
-		{
-			out[i][0] = input[i-1][0];
-		}
-		return out;
+		SimpleMatrix input1 = input.copy();
+		for(int i = input1.getNumRows() - 1; i >= 1; i--)
+			input1.set(i, input1.get(i-1));
+		input1.set(0, bosToken);
+		return input1;
 	}
 	
 	@Override
@@ -347,13 +348,5 @@ public class TransformerModel extends LayersNetwork{
 			out += model[i] + "\n";
 		}
 		return out;
-	}
-	
-	private static void toArray(ArrayList<float[][]> list, float[][][] array)
-	{
-		for(int i = 0; i < array.length; i++)
-		{
-			array[i] = list.get(i);
-		}
 	}
 }

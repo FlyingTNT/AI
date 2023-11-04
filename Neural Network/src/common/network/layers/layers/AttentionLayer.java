@@ -1,7 +1,10 @@
 package common.network.layers.layers;
 
+import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleOperations.ElementOpReal;
+
 import common.network.layers.Activation;
-import common.network.layers.LayersMain;
+import common.network.layers.TransMain;
 import common.network.layers.models.LayersNetwork;
 import common.network.math.NetworkMath;
 
@@ -21,14 +24,17 @@ public class AttentionLayer extends Layer {
 	boolean masking;
 	boolean decoder;
 	
-	float oneOverSqrtKeyLen;
+	double oneOverSqrtKeyLen;
 	
-	float[][][] lastSoftIn;
-	float[][][] lastSoftOut;
+	SimpleMatrix[] lastSoftIn;
+	SimpleMatrix[] lastSoftOut;
+	
+	final SimpleMatrix casualMask;
 	
 	public AttentionLayer(Layer valueSource, Layer keySource, Layer querySource, int heads, boolean masking, boolean decoder) {
 		super(querySource.outputs, querySource.outputs);
 		depth = querySource.depth;
+		setGradientSize(outputs, depth);
 		querySource.nextLayer = this;
 		this.valueSource = valueSource;
 		this.keySource = keySource;
@@ -45,18 +51,24 @@ public class AttentionLayer extends Layer {
 			throw new IllegalArgumentException("Embedding depth must be a multiple of the head count!");
 		}
 		headDataSize = depth/heads;
-		lastSoftIn = new float[heads][][];
-		lastSoftOut = new float[heads][][];
-		lastActivation = new float[outputs][depth];
+		lastSoftIn = new SimpleMatrix[heads];
+		lastSoftOut = new SimpleMatrix[heads];
+		lastActivation = new SimpleMatrix(new float[outputs][depth]);
 		
-		oneOverSqrtKeyLen = (float)(1/Math.sqrt(keySource.outputs));
+		casualMask = new SimpleMatrix(casualMask(querySource.outputs));
+		
+		oneOverSqrtKeyLen = (1/Math.sqrt(keySource.outputs));
 	}
 
-	@Override
-	public float[][] activation(float[][] input) {
-		float[][] valueActivation = valueLinear.activation(valueSource.getLastActivation());
-		float[][] keyActivation = keyLinear.activation(keySource.getLastActivation());
-		float[][] queryActivation = queryLinear.activation(querySource.getLastActivation());
+	//@Override
+	public SimpleMatrix activation(SimpleMatrix input) {
+		valueLinear.activation(null);
+		keyLinear.activation(null);
+		queryLinear.activation(null);
+		
+		SimpleMatrix valueActivation = valueLinear.getLastActivation();
+		SimpleMatrix keyActivation = keyLinear.getLastActivation();
+		SimpleMatrix queryActivation = queryLinear.getLastActivation();
 		//System.out.println("vkq");
 		//System.out.println(LayersMain.floatMatrixToString(valueActivation, 2));
 		//System.out.println(LayersMain.floatMatrixToString(keyActivation, 2));
@@ -66,116 +78,103 @@ public class AttentionLayer extends Layer {
 		//LayersMain.print(valueActivation);
 		//LayersMain.print(keyActivation);
 		//LayersMain.print(queryActivation);
-		
-		masks = valueSource.masks;		
-		
-		int embDepth = 0;
-		int embDepth2 = 0;
+
 		for(int i = 0; i < heads; i++)
-		{
-			float[][] valueData = new float[valueSource.outputs][headDataSize];
-			float[][] keyData = new float[keySource.outputs][headDataSize];
-			float[][] queryData = new float[querySource.outputs][headDataSize];
-			
-			for(int j = 0; j < headDataSize; j++)
-			{
-				for(int k = 0; k < valueSource.outputs; k++)
-				{
-					valueData[k][j] = valueActivation[k][embDepth];
-					keyData[k][j] = keyActivation[k][embDepth];
-					queryData[k][j] = queryActivation[k][embDepth];
-				}
-				embDepth++;
-			}
+		{			
+			SimpleMatrix valueData = valueActivation.cols(i * headDataSize, i * headDataSize + headDataSize);
+			SimpleMatrix keyData = keyActivation.cols(i * headDataSize, i * headDataSize + headDataSize);
+			SimpleMatrix queryData = queryActivation.cols(i * headDataSize, i * headDataSize + headDataSize);
 			
 			if(masking)
 			{
-				lastSoftIn[i] = mask(NetworkMath.scale(NetworkMath.multiplyABT(queryData, keyData), oneOverSqrtKeyLen), querySource, keySource, decoder);
+				lastSoftIn[i] = mask(queryData.mult(keyData.transpose()).scale(oneOverSqrtKeyLen), querySource, keySource, decoder);
 			}else {
-				lastSoftIn[i] = NetworkMath.scale(NetworkMath.multiplyABT(queryData, keyData), oneOverSqrtKeyLen);
-			}
+				lastSoftIn[i] = queryData.mult(keyData.transpose()).scale(oneOverSqrtKeyLen);
+			}			
 			lastSoftOut[i] = Activation.SOFTMAX_DEPTHWISE.activation(lastSoftIn[i]);
 			
 			/*System.out.println("SoftI/O:");
 			LayersMain.print(lastSoftIn[i]);
 			LayersMain.print(lastSoftOut[i]);*/
 			
-			float[][] attention = NetworkMath.multiplyAB(lastSoftOut[i], valueData);
+			//System.out.println("Head: " + i);
+			//System.out.println(lastSoftIn[i]);
+			//System.out.println(lastSoftOut[i]);
+			
+			SimpleMatrix attention = lastSoftOut[i].mult(valueData);
 			
 			//System.out.println(LayersMain.floatMatrixToString(lastSoftIn[0], 2));
 			
-			for(int j = 0; j < headDataSize; j++)
-			{
-				for(int k = 0; k < outputs; k++)
-				{
-					lastActivation[k][embDepth2] = attention[k][j];
-				}
-				embDepth2++;
-			}
+			lastActivation.insertIntoThis(0, i*headDataSize, attention);
 		}
-		return lastActivation;
+		
+		return null;
 	}
 
 	@Override
 	public void backprop() {
-		float[][] nextErrorWeighted = getGradient();
+		SimpleMatrix nextErrorWeighted = new SimpleMatrix(getGradient());
 		clearGradients();
-		int embDepth = 0;
-		int embDepth2 = 0;
 		
-		float[][] valueError = new float[valueSource.outputs][depth];
-		float[][] keyError = new float[keySource.outputs][depth];
-		float[][] queryError = new float[querySource.outputs][depth];
+		double len = nextErrorWeighted.normF();
+		if(len > 1)
+			nextErrorWeighted = nextErrorWeighted.divide(len);
+		
+		SimpleMatrix valueError = new SimpleMatrix(new float[valueSource.outputs][depth]);
+		SimpleMatrix keyError = new SimpleMatrix(new float[keySource.outputs][depth]);
+		SimpleMatrix queryError = new SimpleMatrix(new float[querySource.outputs][depth]);
+		
+		SimpleMatrix valueActivations = new SimpleMatrix(valueSource.getLastActivation());
+		SimpleMatrix keyActivations = new SimpleMatrix(keySource.getLastActivation());
+		SimpleMatrix queryActivations = new SimpleMatrix(querySource.getLastActivation());
 		
 		for(int i = 0; i < heads; i++)
 		{
-			float[][] valueData = new float[valueSource.outputs][headDataSize];
-			float[][] keyData = new float[keySource.outputs][headDataSize];
-			float[][] queryData = new float[querySource.outputs][headDataSize];
-			float[][] nextErrorData = new float[querySource.outputs][headDataSize];
+			SimpleMatrix valueData = valueActivations.cols(i*headDataSize, i*headDataSize+headDataSize);
+			SimpleMatrix keyData = keyActivations.cols(i*headDataSize, i*headDataSize+headDataSize);
+			SimpleMatrix queryData = queryActivations.cols(i*headDataSize, i*headDataSize+headDataSize);
+			SimpleMatrix nextErrorData = nextErrorWeighted.cols(i*headDataSize, i*headDataSize+headDataSize);
 			
-			for(int j = 0; j < headDataSize; j++)
-			{
-				for(int k = 0; k < valueSource.outputs; k++)
-				{
-					valueData[k][j] = valueLinear.lastActivation[k][embDepth];
-					keyData[k][j] = keyLinear.lastActivation[k][embDepth];
-					queryData[k][j] = queryLinear.lastActivation[k][embDepth];
-					nextErrorData[k][j] = nextErrorWeighted[k][embDepth];
-				}
-				embDepth++;
-			}
 			
-			float[][][] error = errorMatrixMult(lastSoftOut[i], valueData, nextErrorData);
+			//System.out.println("Error");
+			SimpleMatrix[] error = errorMatrixMult(lastSoftOut[i], valueData, nextErrorData);
+			//System.out.println(error[0]);
+			//System.out.println(error[1]);
 			
-			float[][] error2 = Activation.SOFTMAX_DEPTHWISE.error(lastSoftIn[i], error[0]);
+			//System.out.println(lastSoftIn[i]);
+			SimpleMatrix error2 = Activation.SOFTMAX_DEPTHWISE.error(lastSoftIn[i], error[0]);
+			//System.out.println("Error2");
 			
-			///*
+			//System.out.println(lastSoftIn[i]);
+			//System.out.println(lastSoftOut[i]);
+			//System.out.println(error2);
+			
 			if(masking)
 			{
-				maskBackProp(error2, querySource, keySource, decoder);
+				error2 = maskBackProp(error2, querySource, keySource, decoder&&masking);
 			}
-			//*/
 			
-			NetworkMath.scale(error2, oneOverSqrtKeyLen);
+			error2 = error2.scale(oneOverSqrtKeyLen);
 			
-			float[][][] error3 = errorMatrixMultBT(queryData, keyData, error2);
+			//System.out.println("Error3");
+			SimpleMatrix[] error3 = errorMatrixMultBT(queryData, keyData, error2);
 			
-			for(int j = 0; j < headDataSize; j++)
-			{
-				for(int k = 0; k < outputs; k++)
-				{
-					valueError[k][embDepth2] = error[1][k][j];
-					keyError[k][embDepth2] = error3[1][k][j];
-					queryError[k][embDepth2] = error3[0][k][j];
-				}
-				embDepth2++;
-			}
+			//System.out.println(error3[0]);
+			//System.out.println(error3[1]);
+			
+			valueError.insertIntoThis(0, i*headDataSize, error[1]);
+			keyError.insertIntoThis(0, i*headDataSize, error3[1]);
+			queryError.insertIntoThis(0, i*headDataSize, error3[0]);
 		}
 		//System.out.println("vkq:");
 		//System.out.println(LayersMain.floatMatrixToString(valueError, 1));
 		//System.out.println(LayersMain.floatMatrixToString(keyError, 1));
 		//System.out.println(LayersMain.floatMatrixToString(queryError, 1));
+		
+		//System.out.println("KVQ");
+		//System.out.println(keyError);
+		//System.out.println(valueError);
+		//System.out.println(queryError);
 		
 		valueLinear.reportGradient(valueError);
 		keyLinear.reportGradient(keyError);
@@ -185,20 +184,18 @@ public class AttentionLayer extends Layer {
 		keyLinear.backprop();
 	}
 	
-	static float[][] attention(float[][] query, float[][] key, float[][] value)
+	SimpleMatrix mask(SimpleMatrix matrix, Layer querySource, Layer keySource, boolean isDecoder)
 	{
-		return NetworkMath.multiplyAB(Activation.SOFTMAX_DEPTHWISE.activation(NetworkMath.scale(NetworkMath.multiplyABT(query, key), 1/(float)Math.sqrt(key.length))), value);
-	}
-	
-	static float[][] mask(float[][] matrix, Layer querySource, Layer keySource, boolean isDecoder)
-	{
-		for(int i = 0; i < matrix.length; i++)
+		if(isDecoder)
 		{
-			for(int j = 0; j < matrix[0].length; j++)
-			{
-				matrix[i][j] = j > i ? Float.NEGATIVE_INFINITY : matrix[i][j];
-			}
-		}		
+			return matrix.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return col > row ? Double.NEGATIVE_INFINITY : value;
+				}
+			});
+		}
 		/*if(isDecoder)
 		{
 			for(int i = 0; i < matrix.length; i++)
@@ -217,7 +214,19 @@ public class AttentionLayer extends Layer {
 				}
 			}
 		}*/
-		
+		return matrix;
+	}
+	
+	double[][] mask(double[][] matrix, Layer query, Layer key, boolean isDecoder)
+	{
+		if(isDecoder)
+			for(int i = 0; i < matrix.length; i++)
+			{
+				for(int j = 0; j < matrix[0].length; j++)
+				{
+					matrix[i][j] = j > i ? Double.NEGATIVE_INFINITY : matrix[i][j];
+				}
+			}
 		return matrix;
 	}
 	
@@ -243,6 +252,30 @@ public class AttentionLayer extends Layer {
 		}
 		
 		return matrix;
+	}
+	
+	static SimpleMatrix maskBackProp(SimpleMatrix matrix, Layer querySource, Layer keySource, boolean isDecoder)
+	{
+		if(isDecoder)
+		{
+			return matrix.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return col > row ? 0 : value;
+				}
+			});
+		}
+		
+		return matrix;
+	}
+	
+	static SimpleMatrix[] errorMatrixMult(SimpleMatrix a, SimpleMatrix b, SimpleMatrix error) 
+	{
+		SimpleMatrix aError = error.mult(b.transpose());
+		SimpleMatrix bError = error.transpose().mult(a).transpose();
+		
+		return new SimpleMatrix[] {aError,bError};
 	}
 	
 	/*
@@ -271,6 +304,14 @@ public class AttentionLayer extends Layer {
 		return out;
 	}
 	
+	static SimpleMatrix[] errorMatrixMultBT(SimpleMatrix a, SimpleMatrix b, SimpleMatrix error)
+	{
+		SimpleMatrix aError = error.mult(b);
+		SimpleMatrix bError = error.transpose().mult(a);
+		
+		return new SimpleMatrix[] {aError, bError};
+	}
+	
 	static float[][][] errorMatrixMultBT(float[][] a, float[][] b, float[][] error)
 	{
 		if(a[0].length != b[0].length)
@@ -292,6 +333,43 @@ public class AttentionLayer extends Layer {
 			}
 		}
 		return out;
+	}
+	
+	static double[][] casualMask(int sequenceLen)
+	{
+		double[][] out = new double[sequenceLen][sequenceLen];
+		for(int i = 0; i < sequenceLen; i++)
+		{
+			for(int j = i+1; j < sequenceLen; j++)
+			{
+				out[i][j] = Double.NEGATIVE_INFINITY;
+			}
+		}	
+		return out;
+	}
+	
+	static SimpleMatrix softmaxDepthwiseError(SimpleMatrix activation, SimpleMatrix nextWeightedError)
+	{
+		SimpleMatrix softmax = activation;
+		SimpleMatrix error = softmax.elementMult(nextWeightedError);
+		
+		float[][] out = new float[activation.getNumRows()][activation.getNumCols()];
+		for(int w = 0; w < activation.getNumRows(); w++)
+		for(int output = 0; output < activation.getNumCols(); output++)
+		{
+			for(int in = 0; in < activation.getNumCols(); in++)
+			{
+				//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Sig(i) * ((i==j?1:0) - Sig(j));
+				if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
+				{
+					out[w][in] += (1 - softmax.get(w, in)) * error.get(w, output);
+				}else {
+					out[w][in] += -softmax.get(w, in)* error.get(w, output);
+				}
+			}
+		}
+		
+		return new SimpleMatrix(out);
 	}
 	
 	@Override

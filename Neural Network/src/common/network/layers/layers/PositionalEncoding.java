@@ -1,45 +1,23 @@
 package common.network.layers.layers;
 
-import common.network.layers.LayersMain;
+import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleOperations.ElementOpReal;
 
 public class PositionalEncoding extends Layer{
 
-	float[][] matrix;
+	SimpleMatrix matrix;
 	
 	public PositionalEncoding(EmbeddingLayer last) {
 		super(last.outputs, last.outputs);
 		lastLayer = last;
 		depth = last.depth;
-		
-		matrix = new float[outputs][depth];
-		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				matrix[i][j] = positionalEmbedding(i, depth, j);
-			}
-		}
-		
-		System.out.println("Positional:");
-		LayersMain.print(matrix);
-		lastActivation = new float[outputs][depth];
+		matrix = new SimpleMatrix(generatePositionalEncoding2(outputs, depth));
+		setGradientSize(inputs, depth);
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
-		input = lastLayer.getLastActivation();
-		masks = lastLayer.getMasks();
-		
-		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				lastActivation[i][j] = input[i][j] + matrix[i][j];
-			}
-		}
-		
+	public SimpleMatrix activation(SimpleMatrix input) {
+		lastActivation = lastLayer.getLastActivation().plus(matrix);	
 		return lastActivation;
 	}
 
@@ -53,33 +31,57 @@ public class PositionalEncoding extends Layer{
 	public String name() {
 		return "Positional Encoding";
 	}
-
-	public static float[][] generatePositionalEncoding(int sequenceLength, int embeddingDepth) {
-        float[][] positionalEncoding = new float[sequenceLength][embeddingDepth];
+	
+	public static double[][] generatePositionalEncoding2(int sequenceLength, int embeddingDepth) {
+        double[][] positionalEncoding = new double[sequenceLength][embeddingDepth];
 
         for (int pos = 0; pos < sequenceLength; pos++) {
-            for (int i = 0; i < embeddingDepth; i++) {
-                double angle = pos / Math.pow(10000, 2.0 * i / embeddingDepth);
-                if (i % 2 == 0) {
-                    positionalEncoding[pos][i] = (float) Math.sin(angle);
-                } else {
-                    positionalEncoding[pos][i] = (float) Math.cos(angle);
-                }
+            for (int i = 0; i < embeddingDepth; i+=2) {
+                double angle = Math.exp(i * -Math.log(10000d) / embeddingDepth);
+                if(Double.isNaN(angle))
+                	throw new IllegalAccessError();
+                positionalEncoding[pos][i] = Math.sin(pos*angle);
+                positionalEncoding[pos][i+1] = Math.cos(pos*angle);
             }
         }
 
         return positionalEncoding;
     }
 	
-	static float positionalEmbedding(int position, int embeddingDepth, int embeddingDepthPosition)
+	public static double[][] generatePositionalEncoding(int sequenceLength, int embeddingDepth) {
+	    double[][] positionalEncoding = new double[sequenceLength][embeddingDepth];
+
+	    for (int pos = 0; pos < sequenceLength; pos++) {
+	        for (int i = 0; i < embeddingDepth; i++) {
+	            double angle = pos / Math.pow(10000, (2 * i) / (double) embeddingDepth);
+	            positionalEncoding[pos][i] = (i % 2 == 0) ? Math.sin(angle) : Math.cos(angle);
+	        }
+	    }
+
+	    return positionalEncoding;
+	}
+
+	
+	static SimpleMatrix positionalEmbedding(int outputs, int depth)
+	{
+		return new SimpleMatrix(new double[outputs][depth]).elementOp(new ElementOpReal() {
+			
+			@Override
+			public double op(int row, int col, double value) {
+				return positionalEmbedding(row, depth, col);
+			}
+		});
+	}
+	
+	static double positionalEmbedding(int position, int embeddingDepth, int embeddingDepthPosition)
 	{
 		double inner = position/  Math.pow(10000, (embeddingDepthPosition/2) / (double)embeddingDepth);
 		
 		if(embeddingDepthPosition % 2 == 0)
 		{
-			return (float)Math.sin(inner);
+			return Math.sin(inner);
 		}else {
-			return (float)Math.cos(inner);
+			return Math.cos(inner);
 		}
 	}
 }

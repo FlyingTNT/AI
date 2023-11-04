@@ -1,5 +1,7 @@
 package common.network.layers.layers;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.Activation;
 import common.network.layers.models.LayersNetwork;
 
@@ -29,7 +31,7 @@ public class Encoder extends Layer{
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
+	public SimpleMatrix activation(SimpleMatrix input) {
 		for(Layer layer : layers)
 			layer.activation(null);
 		return lastActivation;
@@ -51,12 +53,12 @@ public class Encoder extends Layer{
 	}
 
 	@Override
-	public float[][] getLastActivation() {
+	public SimpleMatrix getLastActivation() {
 		return linearNorm.getLastActivation();
 	}
 	
 	@Override
-	public void reportGradient(float[][] gradient) {
+	public void reportGradient(SimpleMatrix gradient) {
 		linearNorm.reportGradient(gradient);
 	}
 	

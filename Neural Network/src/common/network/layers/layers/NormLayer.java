@@ -1,80 +1,48 @@
 package common.network.layers.layers;
 
-import common.network.layers.LayersMain;
+import org.ejml.simple.SimpleMatrix;
 
 public class NormLayer extends Layer{
 
 	//https://www.pinecone.io/learn/batch-layer-normalization/
 	//https://neuralthreads.medium.com/layer-normalization-and-how-to-compute-its-jacobian-for-backpropagation-55a549d5936f
 	
-	private float lastStdev;
-	private float lastDeltas[][];
+	private double lastStdev;
+	private SimpleMatrix lastDeltas;
 	private final int count;
 	
 	public NormLayer(Layer last) 
 	{
 		super(last, last.outputs);
 		
-		lastActivation = new float[outputs][depth];
-		lastDeltas = new float[outputs][depth];
+		lastActivation = new SimpleMatrix(new float[outputs][depth]);
+		lastDeltas = new SimpleMatrix(new float[outputs][depth]);
 		count = outputs*depth;
 	}
 
 	@Override
-	public float[][] activation(float[][] activations)
+	public SimpleMatrix activation(SimpleMatrix activations)
 	{
 		activations = lastLayer.getLastActivation();
 		
-		float average = 0;
+		double average = activations.elementSum();
 		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				if(Float.isNaN(activations[i][j]))
-				{
-					LayersMain.print(activations);
-					System.out.println(activations.length);
-					throw new IllegalArgumentException();
-				}
-				average += activations[i][j];
-			}
-		}
 		average /= count;
-		if(Float.isNaN(average))
+		
+		if(Double.isNaN(average))
 		{
 			throw new IllegalArgumentException();
 		}
 		
-		float stdevSquared = 0;
+		lastDeltas = activations.minus(average);
 		
-		for(int i = 0; i < outputs; i++)
-		{
-			if(masks[i][0])
-			{
-				continue;
-			}
-			for(int j = 0; j < depth; j++)
-			{
-				lastDeltas[i][j] = activations[i][j] - average;
-				stdevSquared += lastDeltas[i][j]*lastDeltas[i][j];
-			}
-		}
-		
-		stdevSquared /= count;
-		lastStdev = (float)Math.sqrt(stdevSquared);
-		if(Float.isNaN(stdevSquared))
+		lastStdev = lastDeltas.normF() / Math.sqrt(count);
+		if(Double.isNaN(lastStdev))
 		{
 			throw new IllegalArgumentException();
 		}
 		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				lastActivation[i][j] = lastDeltas[i][j] / lastStdev;
-			}
-		}
+		lastActivation = lastDeltas.divide(lastStdev);
 		
 		return lastActivation;
 	}
@@ -83,19 +51,19 @@ public class NormLayer extends Layer{
 	public void backprop() {
 		//See Jacobian section at following link:
 		//https://neuralthreads.medium.com/layer-normalization-and-how-to-compute-its-jacobian-for-backpropagation-55a549d5936f
-		float[][] nextErrorWeighted = getGradient();
+		SimpleMatrix nextErrorWeighted = getGradient();
 		clearGradients();
 		
 		if(lastStdev == 0)
 		{
 			throw new IllegalArgumentException();
 		}
-		float stdevCubed = lastStdev * lastStdev * lastStdev;
-		float negativeOneOverNStdevCubed = -1/(count * stdevCubed);
-		float nMinusOneOverNStdev = (count - 1) / (count * lastStdev);
-		float negativeOneOverNStdev = -1 / (count * lastStdev);
+		double stdevCubed = lastStdev * lastStdev * lastStdev;
+		double negativeOneOverNStdevCubed = -1/(count * stdevCubed);
+		double nMinusOneOverNStdev = (count - 1) / (count * lastStdev);
+		double negativeOneOverNStdev = -1 / (count * lastStdev);
 		
-		if(Float.isNaN(stdevCubed))
+		if(Double.isNaN(stdevCubed))
 		{
 			throw new IllegalArgumentException();
 		}
@@ -106,8 +74,8 @@ public class NormLayer extends Layer{
 		{
 			for(int j = 0; j < depth; j++)
 			{
-				float deltaTimesNegativeOneOverNStdevCubed = lastDeltas[i][j] * negativeOneOverNStdevCubed;
-				if(Float.isNaN(nextErrorWeighted[i][j]))
+				double deltaTimesNegativeOneOverNStdevCubed = lastDeltas.get(i, j) * negativeOneOverNStdevCubed;
+				if(Double.isNaN(nextErrorWeighted.get(i, j)))
 				{
 					throw new IllegalArgumentException();
 				}
@@ -115,18 +83,18 @@ public class NormLayer extends Layer{
 				{
 					for(int l = j; l < depth; l++)
 					{
-						float derivativeOfijWithRespectTokl = deltaTimesNegativeOneOverNStdevCubed * lastDeltas[k][l] + ((i == k && j == l) ? nMinusOneOverNStdev : negativeOneOverNStdev);
-						thisError[i][j] += derivativeOfijWithRespectTokl * nextErrorWeighted[k][l];
+						double derivativeOfijWithRespectTokl = deltaTimesNegativeOneOverNStdevCubed * lastDeltas.get(k, l) + ((i == k && j == l) ? nMinusOneOverNStdev : negativeOneOverNStdev);
+						thisError[i][j] += derivativeOfijWithRespectTokl * nextErrorWeighted.get(k, l);
 						if(!(i == k && j == l))//dij/dkl == dkl/dij
 						{
-							thisError[k][l] += derivativeOfijWithRespectTokl * nextErrorWeighted[i][j];
+							thisError[k][l] += derivativeOfijWithRespectTokl * nextErrorWeighted.get(i, j);
 						}
 					}
 				}
 			}
 		}
 		
-		lastLayer.reportGradient(thisError);
+		lastLayer.reportGradient(new SimpleMatrix(thisError));
 	}
 
 

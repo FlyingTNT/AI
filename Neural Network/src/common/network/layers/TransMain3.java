@@ -1,5 +1,7 @@
 package common.network.layers;
 
+import org.ejml.simple.SimpleMatrix;
+
 import common.network.layers.models.TransformerModel;
 
 public class TransMain3 {
@@ -8,7 +10,7 @@ public class TransMain3 {
 	static int HEADS = 4;
 	static int TRANSFORMER_STACK_SIZE = 6;
 	static int VOCAB_SIZE = 183;
-	static float LEARNING_RATE = 0.005f;
+	static float LEARNING_RATE = 0.05f;
 	
 	static String DATA_FOLDER = "C:\\AIClub\\Code\\Small Dataset\\Tokenized";
 	
@@ -26,23 +28,27 @@ public class TransMain3 {
 		
 		//float max = 0;
 		
-		float[][][][] dataset = new float[problemsTokenized.length][2][SEQUENCE_LENGTH][1];
+		SimpleMatrix[][] dataset = new SimpleMatrix[problemsTokenized.length][2];
 		
 		for(int i = 0; i < problemsTokenized.length; i++)
 		{
+			dataset[i][0] = new SimpleMatrix(SEQUENCE_LENGTH, 1);
+			dataset[i][1] = new SimpleMatrix(SEQUENCE_LENGTH, 1);
 			for(int j = 0; j < SEQUENCE_LENGTH; j++)
 			{
 				//if(problemsTokenized[i][j] > max)
 				//	max = problemsTokenized[i][j];
 				//if(submissionsTokenized[i][j] > max)
 				//	max = submissionsTokenized[i][j];
-				dataset[i][0][j][0] = problemsTokenized[i][j];
-				dataset[i][1][j][0] = submissionsTokenized[i][j];
+				dataset[i][0].set(j, 0, problemsTokenized[i][j]);
+				dataset[i][1].set(j, 0, submissionsTokenized[i][j]);
 			}
 		}
 		
 		//System.out.println(max);
-		for(int i = 0; i < 10; i++)
+		for(int i = 0; i < 300; i++)
 			System.out.println("Epoch: " + i + ", Cost: " + transformer.epoch(dataset));
+		
+		transformer.test(dataset);
 	}
 }

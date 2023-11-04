@@ -1,10 +1,7 @@
 package common.network.layers.layers;
 
-import java.util.ArrayList;
-
-import common.network.layers.LayersMain;
+import org.ejml.simple.SimpleMatrix;
 import common.network.layers.models.LayersNetwork;
-import common.network.math.NetworkMath;
 
 public abstract class Layer {
 	
@@ -13,18 +10,18 @@ public abstract class Layer {
 	int depth = 1;
 	Layer lastLayer;
 	Layer nextLayer;
-	protected float[][] lastActivation;
+	protected SimpleMatrix lastActivation;
 	public LayersNetwork model;
 	public boolean[][] masks;
-	
-	private ArrayList<float[][]> gradients;
+	private SimpleMatrix gradient;
 	
 	public Layer(int inputs, int outputs)
 	{
 		this.inputs = inputs;
 		this.outputs = outputs;
-		gradients = new ArrayList<>();
 		masks = new boolean[outputs][depth];
+		gradient = new SimpleMatrix(new float[outputs][depth]);
+		lastActivation = new SimpleMatrix(outputs, depth);
 	}
 	
 	public Layer(Layer last, Layer next)
@@ -34,8 +31,9 @@ public abstract class Layer {
 		this.inputs = last.outputs;
 		this.outputs = next.inputs;
 		last.setNext(this);
-		gradients = new ArrayList<>();
 		masks = new boolean[outputs][depth];
+		gradient = new SimpleMatrix(outputs, depth);
+		lastActivation = new SimpleMatrix(outputs, depth);
 	}
 	
 	public Layer(Layer last, int outputs)
@@ -44,11 +42,12 @@ public abstract class Layer {
 		this.inputs = last.outputs;
 		this.outputs = outputs;
 		this.depth = last.depth;
-		gradients = new ArrayList<>();
 		masks = new boolean[outputs][depth];
+		gradient = new SimpleMatrix(outputs, depth);
+		lastActivation = new SimpleMatrix(outputs, depth);
 	}
 	
-	public abstract float[][] activation(float[][] input);
+	public abstract SimpleMatrix activation(SimpleMatrix input);
 	public abstract void backprop();
 	public abstract String name();
 	//public abstract String display();
@@ -61,12 +60,7 @@ public abstract class Layer {
 		this.nextLayer = nextLayer;
 	}
 	
-	public float[][] getLastActivation() {
-		if(Float.isNaN(lastActivation[0][0]))
-		{
-			int i = 0;
-			i++;
-		}
+	public SimpleMatrix getLastActivation() {
 		
 		return lastActivation;
 	}
@@ -75,35 +69,30 @@ public abstract class Layer {
 		this.model = model;
 	}
 	
-	public void reportGradient(float[][] gradient)
-	{
-		//System.out.println("Adding gradient to " + this);
-		//System.out.println(LayersMain.floatMatrixToString(gradient, 2));
-		
-		gradients.add(gradient);
+	public void reportGradient(SimpleMatrix gradient)
+	{		
+		//System.out.println(this);
+		//gradient.print();
+		this.gradient = this.gradient.plus(gradient);
 	}
 	
-	public float[][] getGradient()
+	public SimpleMatrix getGradient()
 	{
-		if(gradients.size() == 0)
-		{
-			throw new IllegalStateException("There are no gradients!");
-		}else if(gradients.size() == 1) {
-			//System.out.println("Gradient of " + this);
-			//System.out.println(LayersMain.floatMatrixToString(gradients.get(0), 2));
-			return gradients.get(0);
-		}
-		
-		return NetworkMath.sum(gradients.toArray(new float[gradients.size()][outputs][depth]));
+		return gradient;
 	}
 	
 	public void clearGradients()
 	{
-		gradients.clear();
+		gradient = new SimpleMatrix(outputs, depth);
 	}
 	
 	public boolean[][] getMasks() {
 		return masks;
+	}
+	
+	public void setGradientSize(int width, int depth)
+	{
+		gradient = new SimpleMatrix(width, depth);
 	}
 	
 	@Override

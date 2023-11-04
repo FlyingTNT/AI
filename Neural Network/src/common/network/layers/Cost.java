@@ -1,21 +1,22 @@
 package common.network.layers;
 
-import common.network.math.NetworkMath;
+import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleOperations.ElementOpReal;
 
 public interface Cost {
-	float cost(float[][] prediction, float[][] target);
-	float[][] derivative(float[][] prediction, float[][] target);
+	double cost(SimpleMatrix prediction, SimpleMatrix target);
+	SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target);
 	
 	public static Cost QUADRATIC = new Cost() {
 		
 		@Override
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			return NetworkMath.subtract(prediction, target);
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+			return prediction.minus(target);
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-				float x = NetworkMath.length(NetworkMath.subtract(target, prediction)[0]);
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+				double x = prediction.minus(target).normF();
 				return x*x/2;
 		}
 	};
@@ -23,61 +24,75 @@ public interface Cost {
 	//VERIFIED
 	public static Cost CROSS_ENTROPY = new Cost() {
 		@Override
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			float[][] out = new float[prediction.length][prediction[0].length];
-			for(int i = 0; i < prediction.length; i++)
-			{
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					out[i][j] = (prediction[i][j] - target[i][j]) / (prediction[i][j] * (1 - prediction[i][j]));
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+			return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return (value - target.get(row, col)) / (value * (1-value));
 				}
-			}
-			return out;
+			});
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-			float sum = 0;
-			for(int i = 0; i < prediction.length; i++)
-			{
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					sum += target[i][j] * Math.log(prediction[i][j]);
-				}
-			}
-			return -sum;
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			return -target.elementMult(prediction.elementLog()).elementSum();
 		}
 	};
 	
 	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY = new Cost() {
 		@Override//This seems wrong but I derived it myself and it is right.
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			float[][] out = new float[prediction.length][prediction[0].length];
-			for(int i = 0; i < prediction.length; i++)
-			{
-				int goal = (int)target[i][0];
-				//System.out.println(LayersMain.floatMatrixToString(prediction, 1));
-				//System.out.println(goal);
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					out[i][j] = (prediction[i][j] - (j == goal ? 1 : 0)) / ( prediction[i][j] * (1 -  prediction[i][j]));
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+				return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					int index = (int)target.get(row, 0);
+					if(index == -1)
+						return 0;
+					return (value - ((index == col) ? 1 : 0)) / (value * (1-value));
 				}
-			}
-			return out;
+			});
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-			float sum = 0;
-			for(int i = 0; i < prediction.length; i++)
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			double sum = 0;
+			for(int i = 0; i < target.getNumRows(); i++)
 			{
-				int goal = (int)target[i][0];
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					sum += (j == goal ? 1 : 0) * Math.log(prediction[i][j]);
-				}
+				if((int)target.get(i, 0) == -1)
+					continue;
+				sum += -Math.log(prediction.get(i, (int)target.get(i, 0)));
 			}
-			return -sum;
+			return sum;
+		}
+	};
+	
+	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY_WIDTHWISE = new Cost() {
+		@Override//This seems wrong but I derived it myself and it is right.
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+				return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					int index = (int)target.get(col, 0);
+					if(index == -1)
+						return 0;
+					return (value - ((index == row) ? 1 : 0)) / (value * (1-value));
+				}
+			});
+		}
+		
+		@Override
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			double sum = 0;
+			for(int i = 0; i < target.getNumRows(); i++)
+			{
+				if((int)target.get(i, 0) == -1)
+					continue;
+				sum += -Math.log(prediction.get((int)target.get(i, 0), i));
+			}
+			return sum;
 		}
 	};
 }

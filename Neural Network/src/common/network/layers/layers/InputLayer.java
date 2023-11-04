@@ -1,5 +1,7 @@
 package common.network.layers.layers;
 
+import org.ejml.simple.SimpleMatrix;
+
 public class InputLayer extends Layer{
 
 	public InputLayer(int inputs) {
@@ -7,7 +9,7 @@ public class InputLayer extends Layer{
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
+	public SimpleMatrix activation(SimpleMatrix input) {
 		this.lastActivation = input;
 		return input;
 	}

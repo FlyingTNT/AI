@@ -1,13 +1,11 @@
 package common.network.layers.layers;
 
 import java.util.Arrays;
-import java.util.Random;
-
-import common.network.layers.LayersMain;
+import org.ejml.simple.SimpleMatrix;
 
 public class EmbeddingLayer extends Layer {
 
-	float[][] embeddings;
+	SimpleMatrix embeddings;
 	int vocabSize;
 	int[] lastInputs;
 	boolean masking;
@@ -19,7 +17,8 @@ public class EmbeddingLayer extends Layer {
 		super(inputs, inputs);
 		this.vocabSize = vocabSize;
 		this.depth = embeddingDepth;
-		embeddings = new float[vocabSize][embeddingDepth];
+		setGradientSize(inputs, embeddingDepth);
+		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
 		
@@ -37,7 +36,8 @@ public class EmbeddingLayer extends Layer {
 		super(last, last.outputs);
 		this.vocabSize = vocabSize;
 		this.depth = embeddingDepth;
-		embeddings = new float[vocabSize][embeddingDepth];
+		setGradientSize(inputs, embeddingDepth);
+		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
 		
@@ -53,34 +53,26 @@ public class EmbeddingLayer extends Layer {
 	
 	public void init()
 	{
-		Random random = new Random();
-		for(int i = 0; i < vocabSize; i++)
-		{
-			for(int j = 0; j <  depth; j++)
-			{
-				embeddings[i][j] = random.nextFloat();
-				if(embeddings[i][j] == 0)embeddings[i][j] = 1;
-			}
-		}
+		lastActivation = new SimpleMatrix(outputs, depth);
+		embeddings = SimpleMatrix.random(vocabSize, depth);
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
+	public SimpleMatrix activation(SimpleMatrix input) {
 		input = lastLayer.getLastActivation();
-		float[][] out = new float[inputs][depth];
 		
 		//System.out.println("Embedding:");
 		//LayersMain.print(embeddings);
 		
 		for(int i = 0; i < inputs; i++)
 		{
-			int embedding = (int)input[i][0];
+			int embedding = (int)input.get(i, 0);
 			///*
 			if(masking)
 			{
 				if(embedding == -1)
 				{
-					out[i] = embeddings[0];
+					lastActivation.setRow(i, embeddings.getRow(0));
 					masks[i] = TRUE;
 					continue;
 				}
@@ -89,7 +81,7 @@ public class EmbeddingLayer extends Layer {
 			else {
 				if(embedding == -1)
 				{
-					out[i] = embeddings[0];
+					lastActivation.setRow(i, embeddings.getRow(0));
 					continue;
 				}
 			}
@@ -98,26 +90,18 @@ public class EmbeddingLayer extends Layer {
 			{
 				throw new IndexOutOfBoundsException("Embedding index is out of range!");
 			}
-			out[i] = embeddings[embedding];
+			lastActivation.setRow(i, embeddings.getRow(embedding));
 		}
-		lastActivation = out;
-		return out;
+		return lastActivation;
 	}
 
 	@Override//VERIFIED
 	public void backprop() {
-		float[][] nextErrorWeighted = getGradient();	
+		SimpleMatrix nextErrorWeighted = getGradient();	
 		clearGradients();
 		for(int i = 0; i < inputs; i++)
 		{
-			for(int j = 0; j < depth; j++)
-			{
-				if(nextErrorWeighted[i][j] > 20 || nextErrorWeighted[i][j] < -20)
-				{
-					i=i;
-				}
-				embeddings[lastInputs[i] ][j] -= nextErrorWeighted[i][j] * model.getLearningRate();
-			}
+			embeddings.setRow(lastInputs[i], embeddings.getRow(lastInputs[i]).minus(nextErrorWeighted.getRow(i).scale(model.getLearningRate())));
 		}
 		//System.out.println(LayersMain.floatMatrixToString(embeddings, 2));
 	}
