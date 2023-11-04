@@ -80,7 +80,7 @@ public class LayersMain {
 	
 	public static String arrayToString(float[] array, int pointDigits)
 	{
-		DecimalFormat format = new DecimalFormat("0." + "0".repeat(pointDigits));
+		DecimalFormat format = new DecimalFormat("0." + new String(new char[pointDigits]).replace("\0", "0"));
 		if(array.length == 0)//If the array is empty, return {}.
 		{
 			return "{}";
@@ -96,7 +96,7 @@ public class LayersMain {
 
 	public static String floatMatrixToString(float[][] matrix, int pointDigits)
 	{
-		DecimalFormat format = new DecimalFormat("0." + "0".repeat(pointDigits));
+		DecimalFormat format = new DecimalFormat("0." + new String(new char[pointDigits]).replace("\0", "0"));
 		String output = "";//Initializes an output string.
 		for(int i = 0; i < matrix.length; i++)//For row in the matrix.
 		{

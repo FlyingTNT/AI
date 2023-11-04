@@ -75,6 +75,7 @@ public class EmbeddingLayer extends Layer {
 		for(int i = 0; i < inputs; i++)
 		{
 			int embedding = (int)input[i][0];
+			lastInputs[i] = embedding;
 			///*
 			if(masking)
 			{
@@ -93,7 +94,6 @@ public class EmbeddingLayer extends Layer {
 					continue;
 				}
 			}
-			lastInputs[i] = embedding;
 			if(embedding < 0 || embedding >= vocabSize)
 			{
 				throw new IndexOutOfBoundsException("Embedding index is out of range!");

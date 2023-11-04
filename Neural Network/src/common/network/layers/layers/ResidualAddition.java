@@ -14,7 +14,6 @@ public class ResidualAddition extends Layer {
 	@Override
 	public float[][] activation(float[][] input) {
 		lastActivation = NetworkMath.add(lastLayer.getLastActivation(), residual.getLastActivation());
-		masks = lastLayer.masks;
 		return lastActivation;
 	}
 

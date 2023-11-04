@@ -23,7 +23,7 @@ public class TransformerInput extends Layer {
 		this.input.activation(input);
 		embedding.activation(null);
 		positionalEncoding.activation(input);
-		return positionalEncoding.lastActivation;
+		return positionalEncoding.getLastActivation();
 	}
 
 	@Override

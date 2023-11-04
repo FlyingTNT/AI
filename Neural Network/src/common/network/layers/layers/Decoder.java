@@ -39,7 +39,7 @@ public class Decoder extends Layer {
 	public float[][] activation(float[][] input) {
 		for(Layer layer : layers)
 			layer.activation(null);
-		return linearNorm.lastActivation;
+		return linearNorm.getLastActivation();
 	}
 
 	@Override

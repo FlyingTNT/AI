@@ -29,7 +29,6 @@ public class PositionalEncoding extends Layer{
 	@Override
 	public float[][] activation(float[][] input) {
 		input = lastLayer.getLastActivation();
-		masks = lastLayer.getMasks();
 		
 		
 		for(int i = 0; i < outputs; i++)

@@ -2,8 +2,8 @@ package common.network.math;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import common.network.NetworkMatricies;
-import common.network.TrainingSet;
+//import common.network.NetworkMatricies;
+//import common.network.TrainingSet;
 
 public class NetworkMath 
 {
@@ -363,7 +363,7 @@ public class NetworkMath
 		}
 		return output;
 	}
-	
+	/*
 	public static enum costFunction
 	{
 		QUADRIATC, CROSS_ENTROPY
@@ -385,25 +385,14 @@ public class NetworkMath
 		
 		public static float[] outputError(float[] output, float[] expected, float[] weightedInputs)
 		{			
-			/*System.out.println("Error Start");
-			System.out.println(Main.printMatrix(new float[][]{output}));
-			System.out.println(Main.printMatrix(new float[][]{expected}));
-			System.out.println(Main.printMatrix(new float[][]{weightedInputs}));
-			System.out.println(Main.printMatrix(new float[][]{outputGradient(output, expected)}));
-			System.out.println(Main.printMatrix(new float[][]{sigmoidPrime(weightedInputs)}));
-			System.out.println(Main.printMatrix(new float[][]{hadamard(outputGradient(output, expected), sigmoidPrime(weightedInputs))}));*/
+
 			
 			return hadamard(subtract(output, expected), sigmoidPrime(weightedInputs));
 		}
 		
 		public static float[] error(float[][] nextLayerWeights, float[] nextError, float[] weightedInputs)
 		{
-			/**System.out.println(Main.printMatrix(nextLayerWeights));
-			System.out.println(Main.printMatrix(transpose(nextLayerWeights)));
-			System.out.println(Main.printMatrix(new float[][] {nextError}));
-			System.out.println(Main.printMatrix(transpose(new float[][] {nextError})));
-			System.out.println(Main.printMatrix(multiply(transpose(nextLayerWeights), transpose(new float[][] {nextError}))));
-			//System.out.println(Main.printMatrix(multiply((nextLayerWeights), (new float[][] {nextError}))));*/
+
 			
 			return hadamard(transpose(multiplyATB(nextLayerWeights, new float[][]{nextError}))[0], sigmoidPrime(weightedInputs));
 		}
@@ -425,14 +414,14 @@ public class NetworkMath
 			}
 			
 			return outputList.toArray(new float[0][0]);
-		}
+		}*/
 		
 		/**
 		 * @param valueIn The value that this weight's corresponding neuron gave to it
 		 * @param neuronError The value of the error of the neuron this weight feeds data to
 		 * @return The partial derivative of the cost with respect to this weight
 		 */
-		public static float dCostdWeight(float valueIn, float neuronError)
+	/*	public static float dCostdWeight(float valueIn, float neuronError)
 		{
 			return valueIn * neuronError;
 		}
@@ -515,14 +504,14 @@ public class NetworkMath
 			}
 			
 			return outputList.toArray(new float[0][0]);
-		}
+		}*/
 		
 		/**
 		 * @param valueIn The value that this weight's corresponding neuron gave to it
 		 * @param neuronError The value of the error of the neuron this weight feeds data to
 		 * @return The partial derivative of the cost with respect to this weight
 		 */
-		public static float dCostdWeight(float valueIn, float neuronError)
+	/*	public static float dCostdWeight(float valueIn, float neuronError)
 		{
 			return quadraticCost.dCostdWeight(valueIn, neuronError);
 		}
@@ -537,5 +526,5 @@ public class NetworkMath
 			return quadraticCost.gradient(errors, weights, activations);
 		}
 
-	}
+	}*/
 }

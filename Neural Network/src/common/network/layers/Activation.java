@@ -137,9 +137,9 @@ public interface Activation {
 					{
 						if(j == k)
 						{
-							out[i][j] = softmax[i][k] * (1 - softmax[i][k]) * nextWeightedError[i][k];
+							out[i][j] += softmax[i][k] * (1 - softmax[i][k]) * nextWeightedError[i][k];
 						}else {
-							out[i][j] = softmax[i][j] * -softmax[i][k] * nextWeightedError[i][k];
+							out[i][j] += softmax[i][j] * -softmax[i][k] * nextWeightedError[i][k];
 						}
 					}
 				}

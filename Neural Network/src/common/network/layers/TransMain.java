@@ -15,7 +15,7 @@ import common.network.math.NetworkMath;
 public class TransMain {
 
 	public static void main(String[] args) {		
-		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 8, 4, 1);
+		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 8, 4, 6);
 		float[][][][] transformerData = new float[64][2][8][1];
 		
 		int pos = 0;
@@ -49,7 +49,7 @@ public class TransMain {
 		
 		float cost = 100;
 		
-		for(int i = 0; i < 150; i++)
+		for(int i = 0; i < 200; i++)
 		{
 			cost = transformer.epoch(transformerData);
 			System.out.println("Epoch " + (i + 1) + ", Cost: " + format.format(cost));

@@ -32,7 +32,7 @@ public class Encoder extends Layer{
 	public float[][] activation(float[][] input) {
 		for(Layer layer : layers)
 			layer.activation(null);
-		return lastActivation;
+		return linearNorm.getLastActivation();
 	}
 
 	@Override

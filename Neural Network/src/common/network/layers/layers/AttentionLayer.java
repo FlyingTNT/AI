@@ -67,8 +67,6 @@ public class AttentionLayer extends Layer {
 		//LayersMain.print(keyActivation);
 		//LayersMain.print(queryActivation);
 		
-		masks = valueSource.masks;		
-		
 		int embDepth = 0;
 		int embDepth2 = 0;
 		for(int i = 0; i < heads; i++)
@@ -138,9 +136,9 @@ public class AttentionLayer extends Layer {
 			{
 				for(int k = 0; k < valueSource.outputs; k++)
 				{
-					valueData[k][j] = valueLinear.lastActivation[k][embDepth];
-					keyData[k][j] = keyLinear.lastActivation[k][embDepth];
-					queryData[k][j] = queryLinear.lastActivation[k][embDepth];
+					valueData[k][j] = valueLinear.getLastActivation()[k][embDepth];
+					keyData[k][j] = keyLinear.getLastActivation()[k][embDepth];
+					queryData[k][j] = queryLinear.getLastActivation()[k][embDepth];
 					nextErrorData[k][j] = nextErrorWeighted[k][embDepth];
 				}
 				embDepth++;
