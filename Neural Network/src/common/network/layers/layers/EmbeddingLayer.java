@@ -1,6 +1,5 @@
 package common.network.layers.layers;
 
-import java.util.Arrays;
 import org.ejml.simple.SimpleMatrix;
 
 public class EmbeddingLayer extends Layer {
@@ -9,9 +8,6 @@ public class EmbeddingLayer extends Layer {
 	int vocabSize;
 	int[] lastInputs;
 	boolean masking;
-	final boolean[] TRUE;
-	final boolean[] FALSE;
-	final float[] MASK;
 	
 	public EmbeddingLayer(int inputs, int embeddingDepth, int vocabSize, boolean masking) {
 		super(inputs, inputs);
@@ -21,14 +17,6 @@ public class EmbeddingLayer extends Layer {
 		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
-		
-		FALSE = new boolean[depth];
-		boolean[] tr = new boolean[depth];
-		Arrays.fill(tr, true);
-		TRUE = tr;
-		float[] mk = new float[depth];
-		Arrays.fill(mk, Float.NEGATIVE_INFINITY);
-		MASK = mk;
 		init();
 	}
 
@@ -40,14 +28,6 @@ public class EmbeddingLayer extends Layer {
 		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
-		
-		FALSE = new boolean[depth];
-		boolean[] tr = new boolean[depth];
-		Arrays.fill(tr, true);
-		TRUE = tr;
-		float[] mk = new float[depth];
-		Arrays.fill(mk, Float.NEGATIVE_INFINITY);
-		MASK = mk;
 		init();
 	}
 	
@@ -67,16 +47,17 @@ public class EmbeddingLayer extends Layer {
 		for(int i = 0; i < inputs; i++)
 		{
 			int embedding = (int)input.get(i, 0);
+			lastInputs[i] = embedding;
 			///*
 			if(masking)
 			{
 				if(embedding == -1)
 				{
 					lastActivation.setRow(i, embeddings.getRow(0));
-					masks[i] = TRUE;
+					masks[i] = true;
 					continue;
 				}
-				masks[i] = FALSE;
+				masks[i] = false;
 			}//*/
 			else {
 				if(embedding == -1)
@@ -85,7 +66,6 @@ public class EmbeddingLayer extends Layer {
 					continue;
 				}
 			}
-			lastInputs[i] = embedding;
 			if(embedding < 0 || embedding >= vocabSize)
 			{
 				throw new IndexOutOfBoundsException("Embedding index is out of range!");
@@ -101,6 +81,8 @@ public class EmbeddingLayer extends Layer {
 		clearGradients();
 		for(int i = 0; i < inputs; i++)
 		{
+			if(lastInputs[i] == -1)
+				continue;
 			embeddings.setRow(lastInputs[i], embeddings.getRow(lastInputs[i]).minus(nextErrorWeighted.getRow(i).scale(model.getLearningRate())));
 		}
 		//System.out.println(LayersMain.floatMatrixToString(embeddings, 2));

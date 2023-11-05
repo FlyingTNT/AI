@@ -90,10 +90,18 @@ public interface Activation {
 		
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
+			values = values.copy();
+			double[] maxes = new double[values.getNumCols()]; 
+			for(int i = 0; i < values.getNumCols(); i++)
+			{
+				maxes[i] = values.getColumn(i).elementMax();
+				values.setColumn(i, values.getColumn(i).minus(maxes[i]));
+			}
+			
 			SimpleMatrix exp = values.elementExp();
 			
 			for(int d = 0; d < values.getNumCols(); d++)
-				exp.setColumn(d, exp.getColumn(d).divide(exp.getColumn(d).elementSum()));
+				exp.setColumn(d, Double.isFinite(maxes[d]) ? exp.getColumn(d).divide(exp.getColumn(d).elementSum()) : new SimpleMatrix(1, values.getNumRows()));
 			return exp;
 		}
 		
@@ -112,28 +120,7 @@ public interface Activation {
 		}
 		
 		@Override
-		public SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError) {
-			/*SimpleMatrix softmax = activation(input);
-			SimpleMatrix error = softmax.elementMult(nextWeightedError);
-			double[][] out = new double[input.getNumRows()][input.getNumCols()];
-			
-			for(int i = 0; i < input.getNumRows(); i++)
-			{
-				for(int j = 0; j < input.getNumCols(); j++)
-				{
-					for(int k = 0; k < input.getNumCols(); k++)
-					{
-						if(j == k)
-						{
-							out[i][j] += (1 - softmax.get(i, j)) * error.get(i, k);
-						}else {
-							out[i][j] += -softmax.get(i, j) * error.get(i, k);
-						}
-					}
-				}
-			}
-			return new SimpleMatrix(out);*/
-			
+		public SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError) {			
 			SimpleMatrix softmax = activation(input);
 			SimpleMatrix error = softmax.elementMult(nextWeightedError);
 			
@@ -158,9 +145,18 @@ public interface Activation {
 		
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
+			values = values.copy();
+			double[] maxes = new double[values.getNumRows()]; 
+			for(int i = 0; i < values.getNumRows(); i++)
+			{
+				maxes[i] = values.getRow(i).elementMax();
+				values.setRow(i, values.getRow(i).minus(maxes[i]));
+			}
+				
+			
 			SimpleMatrix exps = values.elementExp();
 			for(int i = 0; i < values.getNumRows(); i++)
-				exps.setRow(i, exps.getRow(i).divide(exps.getRow(i).elementSum()));
+				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : new SimpleMatrix(1, values.getNumCols()));
 			return exps;
 		}
 		

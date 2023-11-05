@@ -16,7 +16,7 @@ public class TransformerInput extends Layer {
 		depth = embeddingDepth;
 		
 		input = new InputLayer(sequenceLength);
-		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, false);
+		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, true);
 		positionalEncoding = new PositionalEncoding(embedding);
 	}
 	
@@ -60,5 +60,10 @@ public class TransformerInput extends Layer {
 		input.setModel(model);
 		embedding.setModel(model);
 		positionalEncoding.setModel(model);
+	}
+	
+	@Override
+	public boolean[] getMasks() {
+		return positionalEncoding.getMasks();
 	}
 }

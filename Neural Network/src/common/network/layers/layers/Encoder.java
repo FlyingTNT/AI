@@ -16,11 +16,11 @@ public class Encoder extends Layer{
 	
 	Layer[] layers;
 
-	public Encoder(Layer lastLayer, int heads) {
+	public Encoder(Layer lastLayer, int heads, boolean masking) {
 		super(lastLayer, lastLayer.outputs);
 		this.depth = lastLayer.depth;
 		
-		attention = new AttentionLayer(lastLayer, lastLayer, lastLayer, heads, false, false);
+		attention = new AttentionLayer(lastLayer, lastLayer, lastLayer, heads, masking, false);
 		attentionResidual = new ResidualAddition(attention, lastLayer);
 		attentionNorm = new NormLayer(attentionResidual);
 		linear = new StandardLayer(attentionNorm, lastLayer.outputs, Activation.RELU);
@@ -67,5 +67,15 @@ public class Encoder extends Layer{
 		super.setModel(model);
 		for(Layer layer : layers)
 			layer.setModel(model);
+	}
+	
+	@Override
+	public boolean[] getMasks() {
+		return linearNorm.getMasks();
+	}
+	
+	void setMasking(boolean masking)
+	{
+		attention.masking = masking;
 	}
 }

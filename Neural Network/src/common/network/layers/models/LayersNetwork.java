@@ -12,6 +12,7 @@ public class LayersNetwork {
 	protected Cost cost;
 	protected int inputs;
 	protected int outputs;
+	private boolean[] masks;
 	
 	public LayersNetwork() {}
 	
@@ -25,6 +26,8 @@ public class LayersNetwork {
 		{
 			layers[i].setModel(this);
 		}
+		
+		masks = new boolean[layers[0].inputs];
 	}
 	
 	public float epoch(SimpleMatrix[]... trainingSet)
@@ -84,5 +87,13 @@ public class LayersNetwork {
 			out += model[i] + "\n";
 		}
 		return out;
+	}
+	
+	public boolean[] getMasks() {
+		return masks;
+	}
+	
+	public void setMasks(boolean[] masks) {
+		this.masks = masks;
 	}
 }

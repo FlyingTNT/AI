@@ -62,6 +62,7 @@ public class AttentionLayer extends Layer {
 
 	//@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
+		masks = valueSource.getMasks();
 		valueLinear.activation(null);
 		keyLinear.activation(null);
 		queryLinear.activation(null);
@@ -151,7 +152,7 @@ public class AttentionLayer extends Layer {
 			
 			if(masking)
 			{
-				error2 = maskBackProp(error2, querySource, keySource, decoder&&masking);
+				error2 = maskBackProp(error2, querySource, keySource, decoder);
 			}
 			
 			error2 = error2.scale(oneOverSqrtKeyLen);
@@ -195,63 +196,15 @@ public class AttentionLayer extends Layer {
 					return col > row ? Double.NEGATIVE_INFINITY : value;
 				}
 			});
-		}
-		/*if(isDecoder)
-		{
-			for(int i = 0; i < matrix.length; i++)
-			{
-				for(int j = 0; j < matrix[0].length; j++)
-				{
-					matrix[i][j] = j > i || querySource.masks[i][0] || keySource.masks[j][0] ? Float.NEGATIVE_INFINITY : matrix[i][j];
-				}
-			}
 		}else {
-			for(int i = 0; i < matrix.length; i++)
-			{
-				for(int j = 0; j < matrix[0].length; j++)
-				{
-					matrix[i][j] = querySource.masks[i][j] || keySource.masks[j][i] ? Float.NEGATIVE_INFINITY : matrix[i][j];
+			return matrix.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return querySource.getMasks()[col] || keySource.getMasks()[row] ? Double.NEGATIVE_INFINITY : value;
 				}
-			}
-		}*/
-		return matrix;
-	}
-	
-	double[][] mask(double[][] matrix, Layer query, Layer key, boolean isDecoder)
-	{
-		if(isDecoder)
-			for(int i = 0; i < matrix.length; i++)
-			{
-				for(int j = 0; j < matrix[0].length; j++)
-				{
-					matrix[i][j] = j > i ? Double.NEGATIVE_INFINITY : matrix[i][j];
-				}
-			}
-		return matrix;
-	}
-	
-	static float[][] maskBackProp(float[][] matrix, Layer querySource, Layer keySource, boolean isDecoder)
-	{
-		if(isDecoder)
-		{
-			for(int i = 0; i < matrix.length; i++)
-			{
-				for(int j = i+1; j < matrix[0].length; j++)
-				{
-					matrix[i][j] = 0;
-				}
-			}
-		}else {
-			for(int i = 0; i < matrix.length; i++)
-			{
-				for(int j = 0; j < matrix[0].length; j++)
-				{
-					matrix[i][j] = querySource.masks[i][j] || keySource.masks[j][i] ? 0 : matrix[i][j];
-				}
-			}
+			});
 		}
-		
-		return matrix;
 	}
 	
 	static SimpleMatrix maskBackProp(SimpleMatrix matrix, Layer querySource, Layer keySource, boolean isDecoder)
@@ -262,12 +215,18 @@ public class AttentionLayer extends Layer {
 				
 				@Override
 				public double op(int row, int col, double value) {
-					return col > row ? 0 : value;
+					return col > row || querySource.getMasks()[col] || keySource.getMasks()[row] ? 0 : value;
+				}
+			});
+		}else {
+			return matrix.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return querySource.getMasks()[col] || keySource.getMasks()[row] ? 0 : value;
 				}
 			});
 		}
-		
-		return matrix;
 	}
 	
 	static SimpleMatrix[] errorMatrixMult(SimpleMatrix a, SimpleMatrix b, SimpleMatrix error) 

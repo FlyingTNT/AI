@@ -17,6 +17,7 @@ public class PositionalEncoding extends Layer{
 
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
+		masks = lastLayer.getMasks();
 		lastActivation = lastLayer.getLastActivation().plus(matrix);	
 		return lastActivation;
 	}

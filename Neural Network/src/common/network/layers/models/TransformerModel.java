@@ -55,13 +55,13 @@ public class TransformerModel extends LayersNetwork{
 		encoders = new Encoder[layers];
 		decoders = new Decoder[layers];
 		
-		encoders[0] = new Encoder(encoderIn, heads);
-		decoders[0] = new Decoder(decoderIn, encoders[0], heads, true);
+		encoders[0] = new Encoder(encoderIn, heads, true);
+		decoders[0] = new Decoder(decoderIn, encoders[0], heads, true, true);
 		
 		for(int i = 1; i < layers; i++)
 		{
-			encoders[i] = new Encoder(encoders[i-1], heads);
-			decoders[i] = new Decoder(decoders[i-1], encoders[i], heads, false);
+			encoders[i] = new Encoder(encoders[i-1], heads, true);
+			decoders[i] = new Decoder(decoders[i-1], encoders[i], heads, false, true);
 		}
 		
 		rotate = new RotationLayer(decoders[decoders.length - 1]);
@@ -91,7 +91,7 @@ public class TransformerModel extends LayersNetwork{
 	@Override
 	public float epoch(SimpleMatrix[]... trainingSet) 
 	{//Training set: [item number][input/target][i/o position axis 0][i/o position axis 1]
-		decoders[0].setMasking(true);
+		decoders[0].setInference(false);
 		float costSum = 0;
 		for(int i = 0; i < trainingSet.length; i++)
 		{
@@ -139,8 +139,7 @@ public class TransformerModel extends LayersNetwork{
 	@Override
 	public SimpleMatrix feedForward(SimpleMatrix input) {
 		encoderIn.activation(input);
-		decoders[0].setMasking(false);
-		decoderIn.setMasking(false);
+		decoders[0].setInference(true);
 		
 		//System.out.println("Inferencing:");
 		//input.print();
@@ -179,7 +178,7 @@ public class TransformerModel extends LayersNetwork{
 	public void test(SimpleMatrix[]... trainingSet)
 	{
 		System.out.println("===============TESTING===============");
-		decoders[0].setMasking(false);
+		decoders[0].setInference(true);
 		float costSum = 0;
 		for(int i = 0; i < trainingSet.length; i++)
 		{
@@ -222,8 +221,7 @@ public class TransformerModel extends LayersNetwork{
 	public SimpleMatrix beamSearch(SimpleMatrix input, int width)
 	{
 		encoderIn.activation(input);
-		decoders[0].setMasking(false);
-		decoderIn.setMasking(false);
+		decoders[0].setInference(true);
 		
 		for(int i = 0; i < encoders.length; i++)
 		{

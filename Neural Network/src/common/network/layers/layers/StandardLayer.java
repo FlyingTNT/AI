@@ -40,6 +40,7 @@ public class StandardLayer extends Layer{
 
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
+		masks = lastLayer.getMasks();
 		input = lastLayer.getLastActivation();//Input x depth
 		
 		weightedInputs = new SimpleMatrix(outputs, depth);

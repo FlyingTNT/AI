@@ -12,14 +12,14 @@ public abstract class Layer {
 	Layer nextLayer;
 	protected SimpleMatrix lastActivation;
 	public LayersNetwork model;
-	public boolean[][] masks;
+	public boolean[] masks;
 	private SimpleMatrix gradient;
 	
 	public Layer(int inputs, int outputs)
 	{
 		this.inputs = inputs;
 		this.outputs = outputs;
-		masks = new boolean[outputs][depth];
+		masks = new boolean[outputs];
 		gradient = new SimpleMatrix(new float[outputs][depth]);
 		lastActivation = new SimpleMatrix(outputs, depth);
 	}
@@ -31,7 +31,7 @@ public abstract class Layer {
 		this.inputs = last.outputs;
 		this.outputs = next.inputs;
 		last.setNext(this);
-		masks = new boolean[outputs][depth];
+		masks = new boolean[outputs];
 		gradient = new SimpleMatrix(outputs, depth);
 		lastActivation = new SimpleMatrix(outputs, depth);
 	}
@@ -42,7 +42,7 @@ public abstract class Layer {
 		this.inputs = last.outputs;
 		this.outputs = outputs;
 		this.depth = last.depth;
-		masks = new boolean[outputs][depth];
+		masks = new boolean[outputs];
 		gradient = new SimpleMatrix(outputs, depth);
 		lastActivation = new SimpleMatrix(outputs, depth);
 	}
@@ -86,7 +86,7 @@ public abstract class Layer {
 		gradient = new SimpleMatrix(outputs, depth);
 	}
 	
-	public boolean[][] getMasks() {
+	public boolean[] getMasks() {
 		return masks;
 	}
 	

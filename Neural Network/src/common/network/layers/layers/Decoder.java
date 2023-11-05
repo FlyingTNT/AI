@@ -19,10 +19,10 @@ public class Decoder extends Layer {
 	
 	Layer[] layers;
 	
-	public Decoder(Layer last, Encoder encoder, int heads, boolean isFirst)
+	public Decoder(Layer last, Encoder encoder, int heads, boolean isFirst, boolean masking)
 	{
 		super(last, last.outputs);
-		maskedAttention = new AttentionLayer(last, last, last, heads, isFirst, isFirst);
+		maskedAttention = new AttentionLayer(last, last, last, heads, masking, isFirst);
 		maskedAttentionResidual = new ResidualAddition(maskedAttention, last);
 		maskedAttentionNorm = new NormLayer(maskedAttentionResidual);
 		attention = new AttentionLayer(encoder, encoder, maskedAttentionNorm, heads, false, false);
@@ -79,8 +79,19 @@ public class Decoder extends Layer {
 			layer.setModel(model);
 	}
 	
+	@Override
+	public boolean[] getMasks() {
+		return linearNorm.getMasks();
+	}
+	
 	public void setMasking(boolean masking)
 	{
 		maskedAttention.setMasking(masking);
+		attention.setMasking(masking);
+	}
+	
+	public void setInference(boolean inf)
+	{
+		maskedAttention.decoder = !inf;
 	}
 }

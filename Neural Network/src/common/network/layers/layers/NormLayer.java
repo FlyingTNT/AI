@@ -23,6 +23,7 @@ public class NormLayer extends Layer{
 	@Override
 	public SimpleMatrix activation(SimpleMatrix activations)
 	{
+		masks = lastLayer.getMasks();
 		activations = lastLayer.getLastActivation();
 		
 		double average = activations.elementSum();
