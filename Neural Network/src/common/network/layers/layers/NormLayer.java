@@ -63,7 +63,25 @@ public class NormLayer extends Layer{
 		double negativeOneOverNStdevCubed = -1/(count * stdevCubed);
 		double nMinusOneOverNStdev = (count - 1) / (count * lastStdev);
 		double negativeOneOverNStdev = -1 / (count * lastStdev);
+		double oneOverStdev = 1/lastStdev;
 		
+		//*
+		SimpleMatrix base = lastDeltas.scale(negativeOneOverNStdevCubed);
+		base = base.elementMult(nextErrorWeighted);
+		
+		double sum = base.elementSum();
+		double sum2 = nextErrorWeighted.scale(negativeOneOverNStdev).elementSum();
+		
+		SimpleMatrix mod = nextErrorWeighted.scale(oneOverStdev);
+		
+		SimpleMatrix out = lastDeltas.scale(sum);
+		out = out.plus(sum2);
+		out = out.plus(mod);
+		
+		lastLayer.reportGradient(out);
+		//*/
+		
+		/*
 		if(Double.isNaN(stdevCubed))
 		{
 			throw new IllegalArgumentException();
@@ -96,6 +114,7 @@ public class NormLayer extends Layer{
 		}
 		
 		lastLayer.reportGradient(new SimpleMatrix(thisError));
+		*/
 	}
 
 
