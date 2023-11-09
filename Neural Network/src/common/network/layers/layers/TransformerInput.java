@@ -1,5 +1,7 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.models.LayersNetwork;
@@ -17,6 +19,17 @@ public class TransformerInput extends Layer {
 		
 		input = new InputLayer(sequenceLength);
 		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, true);
+		positionalEncoding = new PositionalEncoding(embedding);
+	}
+	
+	private TransformerInput(EmbeddingLayer embedding)
+	{
+		super(embedding.inputs, embedding.inputs);
+		depth = embedding.depth;
+		
+		input = new InputLayer(embedding.inputs);
+		this.embedding = embedding;
+		embedding.lastLayer = input;
 		positionalEncoding = new PositionalEncoding(embedding);
 	}
 	
@@ -65,5 +78,27 @@ public class TransformerInput extends Layer {
 	@Override
 	public boolean[] getMasks() {
 		return positionalEncoding.getMasks();
+	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
+	}
+	
+	@Override
+	public TransformerInput load(String string, LayersNetwork model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int inputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		int vocabSize = scanner.nextInt();
+		StringBuilder builder = new StringBuilder();
+		while(scanner.hasNextLine())
+			builder.append(scanner.nextLine());
+		scanner.close();
+		EmbeddingLayer embedding = new EmbeddingLayer(0, 0, 0, false).load(builder.toString(), model, -1);
+		TransformerInput out = new TransformerInput(embedding);
+		out.setId(id);
+		return out;
 	}
 }

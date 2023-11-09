@@ -1,6 +1,10 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
+
+import common.network.layers.models.LayersNetwork;
 
 public class NormLayer extends Layer{
 
@@ -121,5 +125,22 @@ public class NormLayer extends Layer{
 	@Override
 	public String name() {
 		return "Norm";
+	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + outputs;
+	}
+	
+	@Override
+	public Layer load(String string, LayersNetwork model, int pos) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastId = scanner.nextInt();
+		scanner.close();
+		Layer lastLayer = model.getLayerByID(lastId);
+		NormLayer out = new NormLayer(lastLayer);
+		out.setId(id);
+		return out;
 	}
 }

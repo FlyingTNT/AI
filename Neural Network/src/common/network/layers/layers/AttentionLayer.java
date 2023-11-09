@@ -1,12 +1,10 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
-
 import common.network.layers.Activation;
-import common.network.layers.TransMain;
 import common.network.layers.models.LayersNetwork;
-import common.network.math.NetworkMath;
 
 public class AttentionLayer extends Layer {
 	
@@ -30,6 +28,8 @@ public class AttentionLayer extends Layer {
 	SimpleMatrix[] lastSoftOut;
 	
 	final SimpleMatrix casualMask;
+	
+	protected AttentionLayer() {super(0, 0);casualMask=null;};
 	
 	public AttentionLayer(Layer valueSource, Layer keySource, Layer querySource, int heads, boolean masking, boolean decoder) {
 		super(querySource.outputs, querySource.outputs);
@@ -62,7 +62,7 @@ public class AttentionLayer extends Layer {
 
 	//@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
-		masks = valueSource.getMasks();
+		masks = querySource.getMasks();
 		valueLinear.activation(null);
 		keyLinear.activation(null);
 		queryLinear.activation(null);
@@ -70,15 +70,6 @@ public class AttentionLayer extends Layer {
 		SimpleMatrix valueActivation = valueLinear.getLastActivation();
 		SimpleMatrix keyActivation = keyLinear.getLastActivation();
 		SimpleMatrix queryActivation = queryLinear.getLastActivation();
-		//System.out.println("vkq");
-		//System.out.println(LayersMain.floatMatrixToString(valueActivation, 2));
-		//System.out.println(LayersMain.floatMatrixToString(keyActivation, 2));
-		//System.out.println(LayersMain.floatMatrixToString(queryActivation, 2));
-		
-		//System.out.println("VKQ:");
-		//LayersMain.print(valueActivation);
-		//LayersMain.print(keyActivation);
-		//LayersMain.print(queryActivation);
 
 		for(int i = 0; i < heads; i++)
 		{			
@@ -88,26 +79,18 @@ public class AttentionLayer extends Layer {
 			
 			if(masking)
 			{
-				lastSoftIn[i] = mask(queryData.mult(keyData.transpose()).scale(oneOverSqrtKeyLen), querySource, keySource, decoder);
+				lastSoftIn[i] = mask(queryData.mult(keyData.transpose()), querySource, keySource, decoder).scale(oneOverSqrtKeyLen);
 			}else {
 				lastSoftIn[i] = queryData.mult(keyData.transpose()).scale(oneOverSqrtKeyLen);
 			}			
+			//lastSoftIn[i].print();
 			lastSoftOut[i] = Activation.SOFTMAX_DEPTHWISE.activation(lastSoftIn[i]);
-			
-			/*System.out.println("SoftI/O:");
-			LayersMain.print(lastSoftIn[i]);
-			LayersMain.print(lastSoftOut[i]);*/
-			
-			//System.out.println("Head: " + i);
-			//System.out.println(lastSoftIn[i]);
-			//System.out.println(lastSoftOut[i]);
 			
 			SimpleMatrix attention = lastSoftOut[i].mult(valueData);
 			
-			//System.out.println(LayersMain.floatMatrixToString(lastSoftIn[0], 2));
-			
 			lastActivation.insertIntoThis(0, i*headDataSize, attention);
 		}
+		
 		
 		return null;
 	}
@@ -196,14 +179,14 @@ public class AttentionLayer extends Layer {
 					return col > row ? Double.NEGATIVE_INFINITY : value;
 				}
 			});
-		}else {
+		}else {return matrix;/*
 			return matrix.elementOp(new ElementOpReal() {
 				
 				@Override
 				public double op(int row, int col, double value) {
-					return querySource.getMasks()[col] || keySource.getMasks()[row] ? Double.NEGATIVE_INFINITY : value;
+					return querySource.getMasks()[row] || keySource.getMasks()[col] ? Double.NEGATIVE_INFINITY : value;
 				}
-			});
+			});//*/
 		}
 	}
 	
@@ -223,7 +206,7 @@ public class AttentionLayer extends Layer {
 				
 				@Override
 				public double op(int row, int col, double value) {
-					return querySource.getMasks()[col] || keySource.getMasks()[row] ? 0 : value;
+					return querySource.getMasks()[row] || keySource.getMasks()[col] ? 0 : value;
 				}
 			});
 		}
@@ -347,5 +330,30 @@ public class AttentionLayer extends Layer {
 	public String name() {
 		return "Attention";
 	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + valueSource.getId() + " " + keySource.getId() + " " + querySource.getId() + " " + heads + " " + masking + " " + decoder + " "
+		+ "\n" + valueLinear.stringify() + "\n$$\n" + keyLinear.stringify() + "\n$$\n" + queryLinear.stringify() + "\n$$\n";
+	}
 
+	@Override
+	public AttentionLayer load(String string, LayersNetwork model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int valueID = scanner.nextInt();
+		int keyID = scanner.nextInt();
+		int queryID = scanner.nextInt();
+		int heads = scanner.nextInt();
+		boolean masking = scanner.nextBoolean();
+		boolean decoder = scanner.nextBoolean();
+		AttentionLayer out = new AttentionLayer(model.getLayerByID(valueID), model.getLayerByID(keyID), model.getLayerByID(queryID), heads, masking, decoder);
+		out.setId(id);
+		scanner.useDelimiter("$$");
+		out.valueLinear = out.keyLinear.load(scanner.next(), model, position);
+		out.keyLinear = out.keyLinear.load(scanner.next(), model, position);
+		out.queryLinear = out.keyLinear.load(scanner.next(), model, position);
+		scanner.close();
+		return out;
+	}
 }

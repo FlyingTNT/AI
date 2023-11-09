@@ -1,6 +1,10 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
+
+import common.network.layers.models.LayersNetwork;
 
 public class EmbeddingLayer extends Layer {
 
@@ -8,6 +12,7 @@ public class EmbeddingLayer extends Layer {
 	int vocabSize;
 	int[] lastInputs;
 	boolean masking;
+	final SimpleMatrix none;
 	
 	public EmbeddingLayer(int inputs, int embeddingDepth, int vocabSize, boolean masking) {
 		super(inputs, inputs);
@@ -17,6 +22,7 @@ public class EmbeddingLayer extends Layer {
 		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
+		none = SimpleMatrix.filled(1, embeddingDepth, 0);
 		init();
 	}
 
@@ -28,6 +34,7 @@ public class EmbeddingLayer extends Layer {
 		embeddings = new SimpleMatrix(new float[vocabSize][embeddingDepth]);
 		lastInputs = new int[inputs];
 		this.masking = masking;
+		none = SimpleMatrix.filled(1, embeddingDepth, 0);
 		init();
 	}
 	
@@ -53,7 +60,7 @@ public class EmbeddingLayer extends Layer {
 			{
 				if(embedding == -1)
 				{
-					lastActivation.setRow(i, embeddings.getRow(0));
+					lastActivation.setRow(i, none);
 					masks[i] = true;
 					continue;
 				}
@@ -62,7 +69,7 @@ public class EmbeddingLayer extends Layer {
 			else {
 				if(embedding == -1)
 				{
-					lastActivation.setRow(i, embeddings.getRow(0));
+					lastActivation.setRow(i, none);
 					continue;
 				}
 			}
@@ -100,5 +107,41 @@ public class EmbeddingLayer extends Layer {
 	
 	public void setMasking(boolean masking) {
 		this.masking = masking;
+	}
+	
+	@Override
+	public String stringify() {
+		StringBuilder out = new StringBuilder();
+		out.append(inputs + " " + depth + " " + vocabSize + " " + masking + "\n");
+		for(int i = 0; i < vocabSize; i++)
+		{
+			for(int j = 0; j < depth; j++)
+			{
+				out.append(embeddings.get(i, j) + " ");
+			}
+			out.append("\n");
+		}
+		return out.toString();
+	}
+	
+	@Override
+	public EmbeddingLayer load(String string, LayersNetwork model, int position) {
+		Scanner scanner = new Scanner(string);
+		int inputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		int vocabSize = scanner.nextInt();
+		boolean masking = scanner.nextBoolean();
+		EmbeddingLayer out = new EmbeddingLayer(inputs, depth, vocabSize, masking);
+		for(int i = 0; i < vocabSize; i++)
+		{
+			for(int j = 0; j < depth; j++)
+			{
+				out.embeddings.set(i, j, scanner.nextDouble());
+			}
+		}
+		
+		scanner.close();
+		
+		return out;
 	}
 }

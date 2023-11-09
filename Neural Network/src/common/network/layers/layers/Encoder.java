@@ -1,5 +1,7 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.Activation;
@@ -24,6 +26,20 @@ public class Encoder extends Layer{
 		attentionResidual = new ResidualAddition(attention, lastLayer);
 		attentionNorm = new NormLayer(attentionResidual);
 		linear = new StandardLayer(attentionNorm, lastLayer.outputs, Activation.RELU);
+		linearResidual = new ResidualAddition(linear, attentionNorm);
+		linearNorm = new NormLayer(linearResidual);
+		
+		layers = new Layer[] {attention, attentionResidual, attentionNorm, linear, linearResidual, linearNorm};
+	}
+	
+	private Encoder(Layer lastLayer, AttentionLayer attention, StandardLayer linear) {
+		super(lastLayer, lastLayer.outputs);
+		this.depth = lastLayer.depth;
+		
+		this.attention = attention;
+		attentionResidual = new ResidualAddition(attention, lastLayer);
+		attentionNorm = new NormLayer(attentionResidual);
+		this.linear = linear;
 		linearResidual = new ResidualAddition(linear, attentionNorm);
 		linearNorm = new NormLayer(linearResidual);
 		
@@ -77,5 +93,32 @@ public class Encoder extends Layer{
 	void setMasking(boolean masking)
 	{
 		attention.masking = masking;
+	}
+	
+	@Override
+	public String stringify() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(getId() + " " + lastLayer.getId() + "\n");
+		builder.append(attention.stringify());
+		builder.append("\n##\n");
+		builder.append(linear.stringify());
+		builder.append("\n##\n");
+		return builder.toString();
+	}
+	
+	@Override
+	public Encoder load(String string, LayersNetwork model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastID = scanner.nextInt();
+		scanner.useDelimiter("##");
+		AttentionLayer builder = new AttentionLayer();
+		AttentionLayer attentionLayer = builder.load(scanner.next(), model, position);
+		model.reportLayer(attentionLayer);
+		StandardLayer linear = attentionLayer.keyLinear.load(scanner.next(), model, position);
+		scanner.close();
+		Encoder out = new Encoder(model.getLayerByID(lastID), attentionLayer, linear);
+		out.setId(id);
+		return out;
 	}
 }

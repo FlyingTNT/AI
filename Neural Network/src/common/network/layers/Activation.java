@@ -156,13 +156,13 @@ public interface Activation {
 			
 			SimpleMatrix exps = values.elementExp();
 			for(int i = 0; i < values.getNumRows(); i++)
-				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : new SimpleMatrix(1, values.getNumCols()));
+				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 1d/values.getNumCols()));
 			return exps;
 		}
 		
 		@Override
 		public String name() {
-			return "Softmax Depthwise";
+			return "Softmax_Depthwise";
 		}
 	};
 	

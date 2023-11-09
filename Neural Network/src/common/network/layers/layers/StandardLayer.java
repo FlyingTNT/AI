@@ -1,10 +1,12 @@
 package common.network.layers.layers;
 
 import java.util.Random;
+import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.Activation;
+import common.network.layers.models.LayersNetwork;
 
 public class StandardLayer extends Layer{
 
@@ -41,7 +43,11 @@ public class StandardLayer extends Layer{
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
 		masks = lastLayer.getMasks();
-		input = lastLayer.getLastActivation();//Input x depth
+		input = lastLayer.getLastActivation().copy();//Input x depth
+		
+		/*for(int i = 0; i < masks.length; i++)
+			if(masks[i])
+				input.setRow(i, new SimpleMatrix(1, depth));*/
 		
 		weightedInputs = new SimpleMatrix(outputs, depth);
 		
@@ -139,5 +145,86 @@ public class StandardLayer extends Layer{
         			weights[j].set(i, k, (mean + desiredStdDev * random.nextGaussian()));
         	}
         		
+	}
+	
+	@Override
+	public String className() {
+		return "Standard";
+	}
+	
+	@Override
+	public String stringify()
+	{
+		String out = getId() + " " + lastLayer.getId() + " " + inputs  + " " + outputs + " " + depth + " " + activation.name() +"\n";
+		for(int d = 0; d < depth; d++)
+		{
+			for(int o = 0; o < outputs; o++)
+			{
+				out += biases.get(o, d) + " ";
+				for(int i = 0; i < inputs; i++)
+				{
+					out += weights[d].get(o, i) + " ";
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+	
+	@Override
+	public StandardLayer load(String string, LayersNetwork model, int position) {
+		StandardLayer out;
+		
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastID = scanner.nextInt();
+		int inputs = scanner.nextInt();
+		int outputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		String activation = scanner.next();
+		Activation activation2 = getActivation(activation);
+		out = new StandardLayer(model.getLayerByID(lastID), outputs, activation2);
+		SimpleMatrix biases = new SimpleMatrix(outputs, depth);
+		SimpleMatrix[] weights = new SimpleMatrix[depth];
+		
+		for(int d = 0; d < depth; d++)
+		{
+			weights[d] = new SimpleMatrix(outputs, inputs);
+			for(int o = 0; o < outputs; o++)
+			{
+				biases.set(o, d, scanner.nextDouble());
+				for(int i = 0; i < inputs; i++)
+				{
+					weights[d].set(o, i, scanner.nextDouble());
+				}
+			}
+		}
+		out.biases = biases;
+		out.weights = weights;
+		
+		scanner.close();
+		
+		out.setId(id);
+		
+		return out;
+	}
+	
+	static Activation getActivation(String name)
+	{
+		switch(name)
+		{
+		case "Softmax":
+			return Activation.SOFTMAX;
+		case "Softmax_Depthwise":
+			return Activation.SOFTMAX_DEPTHWISE;
+		case "ReLU":
+			return Activation.RELU;
+		case "Sigmoid":
+			return Activation.SIGMOID;
+		case "None":
+			return Activation.NONE;
+		default:
+			throw new IllegalArgumentException("Unknown Activation: " + name);
+		}
 	}
 }

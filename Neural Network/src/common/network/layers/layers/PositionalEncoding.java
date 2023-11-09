@@ -1,7 +1,11 @@
 package common.network.layers.layers;
 
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
+
+import common.network.layers.models.LayersNetwork;
 
 public class PositionalEncoding extends Layer{
 
@@ -84,5 +88,23 @@ public class PositionalEncoding extends Layer{
 		}else {
 			return Math.cos(inner);
 		}
+	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth;
+	}
+	
+	@Override
+	public Layer load(String string, LayersNetwork model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastID = scanner.nextInt();
+		scanner.close();
+		
+		PositionalEncoding out = new PositionalEncoding((EmbeddingLayer)model.getLayerByID(lastID));
+		out.setId(id);
+		
+		return out;
 	}
 }

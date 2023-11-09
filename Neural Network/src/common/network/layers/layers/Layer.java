@@ -14,6 +14,7 @@ public abstract class Layer {
 	public LayersNetwork model;
 	public boolean[] masks;
 	private SimpleMatrix gradient;
+	private int id = -1;
 	
 	public Layer(int inputs, int outputs)
 	{
@@ -50,7 +51,9 @@ public abstract class Layer {
 	public abstract SimpleMatrix activation(SimpleMatrix input);
 	public abstract void backprop();
 	public abstract String name();
-	//public abstract String display();
+	public abstract String stringify();
+	public abstract Layer load(String string, LayersNetwork model, int position);
+	public String className() {return name();}
 	
 	public void setLast(Layer lastLayer) {
 		this.lastLayer = lastLayer;
@@ -67,6 +70,9 @@ public abstract class Layer {
 	
 	public void setModel(LayersNetwork model) {
 		this.model = model;
+		if(id == -1)
+			id = model.getNextID();
+		model.reportLayer(this);
 	}
 	
 	public void reportGradient(SimpleMatrix gradient)
@@ -95,8 +101,20 @@ public abstract class Layer {
 		gradient = new SimpleMatrix(width, depth);
 	}
 	
+	public Layer getLastLayer() {
+		return lastLayer;
+	}
+	
 	@Override
 	public String toString() {
 		return name() + " (" + outputs + ", "+ depth + ")";
+	}
+	
+	public int getId() {
+		return id;
+	}
+	
+	public void setId(int id) {
+		this.id = id;
 	}
 }
