@@ -1,12 +1,7 @@
 package common.network.layers;
 
-import java.util.Arrays;
-
-import org.ejml.data.Complex_F64;
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
-
-import common.network.math.NetworkMath;
 
 public interface Activation {
 	
@@ -156,7 +151,7 @@ public interface Activation {
 			
 			SimpleMatrix exps = values.elementExp();
 			for(int i = 0; i < values.getNumRows(); i++)
-				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 1d/values.getNumCols()));
+				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 0));
 			return exps;
 		}
 		

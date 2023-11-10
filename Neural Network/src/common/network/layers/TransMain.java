@@ -11,7 +11,7 @@ import common.network.layers.models.TransformerModel;
 
 public class TransMain {	
 	public static void main(String[] args) {		
-		TransformerModel transformer = new TransformerModel(0.05f, 8, 8, 8, 1, 1);
+		TransformerModel transformer = new TransformerModel(0.005f, 8, 12, 8, 3, 6);
 		SimpleMatrix[][] transformerData = new SimpleMatrix[64][2];
 		
 		int pos = 0;
@@ -45,27 +45,33 @@ public class TransMain {
 		
 		DecimalFormat format = new DecimalFormat("0.000");
 		
-		transformer.epoch(transformerData);
-		
 		float cost = 100;
 		
-		for(int i = 0; i < 17; i++)
+		int count = 0;
+		
+		for(int i = 0; count < 5; i++)
 		{
 			cost = transformer.epoch(transformerData);
 			System.out.println("Epoch " + (i + 1) + ", Cost: " + format.format(cost));
+			if(cost < 1)
+				count++;
+			else
+				count = 0;
 		}
 		
 		System.out.println("=======================================");
 		
 		for(int i = 0; i < 64; i++)
 		{
-			SimpleMatrix result = transformer.beamSearch(transformerData[i][0], 20);
+			SimpleMatrix result = transformer.beamSearch(transformerData[i][0], 10);
 			for(int j = 0; j < 8; j++)
 			{
 				System.out.println(transformerData[i][0].get(j, 0) + " -> " + result.get(j+1, 0) + " ~ " + transformerData[i][1].get(j, 0));
 			}
 			System.out.println();
 		}
+		
+		//transformer.test(transformerData);
 		
 		File out = new File("C:\\AIClub\\Test\\model.txt");
 		try {

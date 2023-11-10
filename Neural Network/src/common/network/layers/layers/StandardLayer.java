@@ -45,9 +45,11 @@ public class StandardLayer extends Layer{
 		masks = lastLayer.getMasks();
 		input = lastLayer.getLastActivation().copy();//Input x depth
 		
-		/*for(int i = 0; i < masks.length; i++)
-			if(masks[i])
-				input.setRow(i, new SimpleMatrix(1, depth));*/
+		/*
+		if(masks.length == inputs)
+			for(int i = 0; i < masks.length; i++)
+				if(masks[i])
+					input.setRow(i, new SimpleMatrix(1, depth));//*/
 		
 		weightedInputs = new SimpleMatrix(outputs, depth);
 		

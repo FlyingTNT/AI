@@ -2,6 +2,7 @@ package common.network.layers.layers;
 
 import org.ejml.simple.SimpleMatrix;
 import common.network.layers.models.LayersNetwork;
+import common.network.math.NetworkMath;
 
 public abstract class Layer {
 	
@@ -79,6 +80,7 @@ public abstract class Layer {
 	{		
 		//System.out.println(this);
 		//gradient.print();
+		//this.gradient = this.gradient.plus(NetworkMath.normalize(gradient, 1));
 		this.gradient = this.gradient.plus(gradient);
 	}
 	

@@ -29,7 +29,7 @@ public class Decoder extends Layer {
 		maskedAttention = new AttentionLayer(last, last, last, heads, masking, isFirst);
 		maskedAttentionResidual = new ResidualAddition(maskedAttention, last);
 		maskedAttentionNorm = new NormLayer(maskedAttentionResidual);
-		attention = new AttentionLayer(encoder, encoder, maskedAttentionNorm, heads, true, false);
+		attention = new AttentionLayer(encoder, encoder, maskedAttentionNorm, heads, masking, false);
 		attentionResidual = new ResidualAddition(attention, maskedAttentionNorm);
 		attentionNorm = new NormLayer(attentionResidual);
 		linear = new StandardLayer(attentionNorm, last.outputs, Activation.RELU);

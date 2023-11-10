@@ -1,12 +1,9 @@
 package common.network.layers.models;
 
 import java.util.ArrayList;
-
 import org.ejml.simple.SimpleMatrix;
-
 import common.network.layers.Activation;
 import common.network.layers.Cost;
-import common.network.layers.TransMain;
 import common.network.layers.layers.Decoder;
 import common.network.layers.layers.Encoder;
 import common.network.layers.layers.Layer;
@@ -178,18 +175,24 @@ public class TransformerModel extends LayersNetwork{
 	public void test(SimpleMatrix[]... trainingSet)
 	{
 		System.out.println("===============TESTING===============");
-		decoders[0].setInference(true);
+		decoders[0].setInference(false);
 		float costSum = 0;
 		for(int i = 0; i < trainingSet.length; i++)
 		{
 			encoderIn.activation(trainingSet[i][0]);//ENCODER IN
 			decoderIn.activation(shift(trainingSet[i][1], BOS));//DECODER IN
 			
+			//SimpleMatrix in = SimpleMatrix.filled(trainingSet[i][1].getNumRows(), 1, -1);
+			//in.set(0, BOS);
+			
+			//decoderIn.activation(in);
+			
 			System.out.println("\nEncoder in:");
 			trainingSet[i][0].print();
 			
 			System.out.println("\nDecoder in:");
-			trainingSet[i][1].print();
+			//in.print();
+			shift(trainingSet[i][1], BOS).print();
 			
 			for(int j = 0; j < encoders.length; j++)
 			{
@@ -221,7 +224,7 @@ public class TransformerModel extends LayersNetwork{
 	public SimpleMatrix beamSearch(SimpleMatrix input, int width)
 	{
 		encoderIn.activation(input);
-		decoders[0].setInference(true);
+		decoders[0].setInference(false);
 		
 		for(int i = 0; i < encoders.length; i++)
 		{

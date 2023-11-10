@@ -15,7 +15,7 @@ public class PositionalEncoding extends Layer{
 		super(last.outputs, last.outputs);
 		lastLayer = last;
 		depth = last.depth;
-		matrix = new SimpleMatrix(generatePositionalEncoding2(outputs, depth));
+		matrix = new SimpleMatrix(generatePositionalEncoding(outputs, depth));
 		setGradientSize(inputs, depth);
 	}
 

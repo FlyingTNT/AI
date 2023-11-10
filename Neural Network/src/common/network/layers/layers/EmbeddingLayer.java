@@ -92,7 +92,6 @@ public class EmbeddingLayer extends Layer {
 				continue;
 			embeddings.setRow(lastInputs[i], embeddings.getRow(lastInputs[i]).minus(nextErrorWeighted.getRow(i).scale(model.getLearningRate())));
 		}
-		//System.out.println(LayersMain.floatMatrixToString(embeddings, 2));
 	}
 
 	@Override

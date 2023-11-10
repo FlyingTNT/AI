@@ -151,6 +151,14 @@ public class NetworkMath
 		return (float) Math.sqrt(dot(a, a));
 	}
 	
+	public static SimpleMatrix normalize(SimpleMatrix gradient, double max)
+	{
+		double l2 = gradient.normF();
+		if(l2 > max)
+			return gradient.scale(max/l2);
+		return gradient;
+	}
+	
 	/**
 	 * a-b
 	 * @return a-b

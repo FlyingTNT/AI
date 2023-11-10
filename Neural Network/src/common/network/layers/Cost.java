@@ -50,7 +50,9 @@ public interface Cost {
 					int index = (int)target.get(row, 0);
 					if(index == -1)
 						return 0;
-					return (value - ((index == col) ? 1 : 0)) / (value * (1-value));
+					double out = (value - ((index == col) ? 1 : 0)) / (value * (1-value));
+					return out > 5 ? 5 : out < -5 ? -5 : out;
+					//return -((index == col) ? 1 : 0)/value;
 				}
 			});
 		}

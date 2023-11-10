@@ -37,8 +37,9 @@ public class TransformerInput extends Layer {
 	public SimpleMatrix activation(SimpleMatrix input) {
 		this.input.activation(input);
 		embedding.activation(null);
-		positionalEncoding.activation(input);
-		return positionalEncoding.getLastActivation();
+		positionalEncoding.activation(null);
+		lastActivation = positionalEncoding.getLastActivation();
+		return lastActivation;
 	}
 
 	@Override
