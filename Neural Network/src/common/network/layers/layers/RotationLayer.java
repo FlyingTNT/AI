@@ -14,14 +14,6 @@ public class RotationLayer extends Layer{
 		lastActivation = new SimpleMatrix(outputs, depth);
 		setGradientSize(outputs, depth);
 	}
-	
-	private RotationLayer(int outputs, int depth)
-	{
-		super(depth, outputs);
-		this.depth = depth;
-		lastActivation = new SimpleMatrix(outputs, depth);
-		setGradientSize(outputs, depth);
-	}
 
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input) {
@@ -48,8 +40,7 @@ public class RotationLayer extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + outputs + " " + depth + "\n"; 
 	}
 	
-	@Override
-	public RotationLayer load(String string, LayersNetwork model, int position) {
+	public static RotationLayer load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

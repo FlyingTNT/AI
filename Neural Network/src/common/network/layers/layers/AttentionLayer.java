@@ -226,8 +226,7 @@ public class AttentionLayer extends Layer {
 		+ "\n" + valueLinear.stringify() + "\n$$\n" + keyLinear.stringify() + "\n$$\n" + queryLinear.stringify() + "\n$$\n";
 	}
 
-	@Override
-	public AttentionLayer load(String string, LayersNetwork model, int position) {
+	public static AttentionLayer load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int valueID = scanner.nextInt();
@@ -238,10 +237,10 @@ public class AttentionLayer extends Layer {
 		boolean decoder = scanner.nextBoolean();
 		AttentionLayer out = new AttentionLayer(model.getLayerByID(valueID), model.getLayerByID(keyID), model.getLayerByID(queryID), heads, masking, decoder);
 		out.setId(id);
-		scanner.useDelimiter("$$");
-		out.valueLinear = out.keyLinear.load(scanner.next(), model, position);
-		out.keyLinear = out.keyLinear.load(scanner.next(), model, position);
-		out.queryLinear = out.keyLinear.load(scanner.next(), model, position);
+		scanner.useDelimiter("\\$\\$");
+		out.valueLinear = StandardLayer.load(scanner.next(), model, position);
+		out.keyLinear = StandardLayer.load(scanner.next(), model, position);
+		out.queryLinear = StandardLayer.load(scanner.next(), model, position);
 		scanner.close();
 		return out;
 	}

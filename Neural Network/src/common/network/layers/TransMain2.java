@@ -9,7 +9,7 @@ import common.network.layers.models.TransformerModel;
 public class TransMain2 {
 
 	public static void main(String[] args) {
-		TransformerModel transformer = new TransformerModel(0.05f, 9, 16, 9, 4, 1);
+		TransformerModel transformer = new TransformerModel(0.05f, 9, 9, 16, 9, 9, 4, 1);
 		SimpleMatrix[][] transformerData = new SimpleMatrix[][] {
 			{new SimpleMatrix(new float[][]{{1}, {4}, {7}, {4}, {8}, {5}, {2}, {3}, {1}}), new SimpleMatrix(new float[][]{{1}, {3}, {7}, {4}, {4}, {5}, {8}, {1}, {6}})},
 			{new SimpleMatrix(new float[][]{{4}, {8}, {3}, {8}, {7}, {5}, {1}, {2}, {5}}), new SimpleMatrix(new float[][]{{7}, {4}, {8}, {8}, {1}, {6}, {5}, {3}, {2}})}

@@ -30,9 +30,8 @@ public class InputLayer extends Layer{
 	public String stringify() {
 		return getId() + " " + inputs;
 	}
-	
-	@Override
-	public InputLayer load(String string, LayersNetwork model, int position) {
+
+	public static InputLayer load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int inputs = scanner.nextInt();

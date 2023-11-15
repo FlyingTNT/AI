@@ -37,6 +37,11 @@ public class PositionalEncoding extends Layer{
 		return "Positional Encoding";
 	}
 	
+	@Override
+	public String className() {
+		return "PositionalEncoding";
+	}
+	
 	public static double[][] generatePositionalEncoding2(int sequenceLength, int embeddingDepth) {
         double[][] positionalEncoding = new double[sequenceLength][embeddingDepth];
 
@@ -95,8 +100,7 @@ public class PositionalEncoding extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth;
 	}
 	
-	@Override
-	public Layer load(String string, LayersNetwork model, int position) {
+	public static PositionalEncoding load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

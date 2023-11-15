@@ -11,7 +11,7 @@ import common.network.layers.models.TransformerModel;
 
 public class TransMain {	
 	public static void main(String[] args) {		
-		TransformerModel transformer = new TransformerModel(0.005f, 8, 12, 8, 3, 6);
+		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 12, 8, 8, 3, 6);
 		SimpleMatrix[][] transformerData = new SimpleMatrix[64][2];
 		
 		int pos = 0;
@@ -28,6 +28,7 @@ public class TransMain {
 						in.set(k, 0, i+1);
 						out.set(k, 0, j+1);
 					}else {
+						
 						in.set(k, 0, j+1);
 						out.set(k, 0, i+1);
 					}

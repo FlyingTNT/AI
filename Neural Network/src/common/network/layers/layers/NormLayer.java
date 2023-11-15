@@ -132,8 +132,7 @@ public class NormLayer extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + outputs;
 	}
 	
-	@Override
-	public Layer load(String string, LayersNetwork model, int pos) {
+	public static NormLayer load(String string, LayersNetwork model, int pos) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastId = scanner.nextInt();

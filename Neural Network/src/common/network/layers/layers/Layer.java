@@ -17,6 +17,8 @@ public abstract class Layer {
 	private SimpleMatrix gradient;
 	private int id = -1;
 	
+	protected Layer(){outputs = 0;inputs = 0;};
+	
 	public Layer(int inputs, int outputs)
 	{
 		this.inputs = inputs;
@@ -53,7 +55,6 @@ public abstract class Layer {
 	public abstract void backprop();
 	public abstract String name();
 	public abstract String stringify();
-	public abstract Layer load(String string, LayersNetwork model, int position);
 	public String className() {return name();}
 	
 	public void setLast(Layer lastLayer) {

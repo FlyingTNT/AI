@@ -32,18 +32,18 @@ public class Encoder extends Layer{
 		layers = new Layer[] {attention, attentionResidual, attentionNorm, linear, linearResidual, linearNorm};
 	}
 	
-	private Encoder(Layer lastLayer, AttentionLayer attention, StandardLayer linear) {
+	private Encoder(Layer lastLayer, AttentionLayer attention, StandardLayer linear, ResidualAddition residualAddition, NormLayer norm) {
 		super(lastLayer, lastLayer.outputs);
 		this.depth = lastLayer.depth;
 		
 		this.attention = attention;
-		attentionResidual = new ResidualAddition(attention, lastLayer);
-		attentionNorm = new NormLayer(attentionResidual);
+		attentionResidual = residualAddition;
+		attentionNorm = norm;
 		this.linear = linear;
-		linearResidual = new ResidualAddition(linear, attentionNorm);
+		linearResidual = new ResidualAddition(linear, norm);
 		linearNorm = new NormLayer(linearResidual);
 		
-		layers = new Layer[] {attention, attentionResidual, attentionNorm, linear, linearResidual, linearNorm};
+		layers = new Layer[] {attention, residualAddition, norm, linear, linearResidual, linearNorm};
 	}
 
 	@Override
@@ -98,7 +98,7 @@ public class Encoder extends Layer{
 	@Override
 	public String stringify() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(getId() + " " + lastLayer.getId() + "\n");
+		builder.append(getId() + " " + lastLayer.getId() + " "+ attentionNorm.getId() + "\n");
 		builder.append(attention.stringify());
 		builder.append("\n##\n");
 		builder.append(linear.stringify());
@@ -106,18 +106,22 @@ public class Encoder extends Layer{
 		return builder.toString();
 	}
 	
-	@Override
-	public Encoder load(String string, LayersNetwork model, int position) {
+	public static Encoder load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();
+		int normID = scanner.nextInt();
 		scanner.useDelimiter("##");
-		AttentionLayer builder = new AttentionLayer();
-		AttentionLayer attentionLayer = builder.load(scanner.next(), model, position);
+		AttentionLayer attentionLayer = AttentionLayer.load(scanner.next(), model, position);
 		model.reportLayer(attentionLayer);
-		StandardLayer linear = attentionLayer.keyLinear.load(scanner.next(), model, position);
+		
+		ResidualAddition residualAddition = new ResidualAddition(attentionLayer, model.getLayerByID(lastID));
+		NormLayer norm = new NormLayer(residualAddition);
+		norm.setId(normID);
+		model.reportLayer(norm);		
+		StandardLayer linear = StandardLayer.load(scanner.next(), model, position);
 		scanner.close();
-		Encoder out = new Encoder(model.getLayerByID(lastID), attentionLayer, linear);
+		Encoder out = new Encoder(model.getLayerByID(lastID), attentionLayer, linear, residualAddition, norm);
 		out.setId(id);
 		return out;
 	}

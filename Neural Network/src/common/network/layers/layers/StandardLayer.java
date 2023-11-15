@@ -172,11 +172,10 @@ public class StandardLayer extends Layer{
 		}
 		return out;
 	}
-	
-	@Override
-	public StandardLayer load(String string, LayersNetwork model, int position) {
+
+	public static StandardLayer load(String string, LayersNetwork model, int position) {
 		StandardLayer out;
-		
+
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

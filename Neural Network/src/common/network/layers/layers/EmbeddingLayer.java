@@ -111,7 +111,7 @@ public class EmbeddingLayer extends Layer {
 	@Override
 	public String stringify() {
 		StringBuilder out = new StringBuilder();
-		out.append(inputs + " " + depth + " " + vocabSize + " " + masking + "\n");
+		out.append(getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + vocabSize + " " + masking + "\n");
 		for(int i = 0; i < vocabSize; i++)
 		{
 			for(int j = 0; j < depth; j++)
@@ -122,15 +122,16 @@ public class EmbeddingLayer extends Layer {
 		}
 		return out.toString();
 	}
-	
-	@Override
-	public EmbeddingLayer load(String string, LayersNetwork model, int position) {
+
+	public static EmbeddingLayer load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastId = scanner.nextInt();
 		int inputs = scanner.nextInt();
 		int depth = scanner.nextInt();
 		int vocabSize = scanner.nextInt();
 		boolean masking = scanner.nextBoolean();
-		EmbeddingLayer out = new EmbeddingLayer(inputs, depth, vocabSize, masking);
+		EmbeddingLayer out = new EmbeddingLayer(model.getLayerByID(lastId), depth, vocabSize, masking);
 		for(int i = 0; i < vocabSize; i++)
 		{
 			for(int j = 0; j < depth; j++)
@@ -140,6 +141,8 @@ public class EmbeddingLayer extends Layer {
 		}
 		
 		scanner.close();
+		
+		out.setId(id);
 		
 		return out;
 	}

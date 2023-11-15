@@ -36,12 +36,16 @@ public class ResidualAddition extends Layer {
 	}
 	
 	@Override
+	public String className() {
+		return "PositionalEncoding";
+	}
+	
+	@Override
 	public String stringify() {
 		return getId() + " " + lastLayer.getId() + " " + residual.getId() + " " + inputs + " " + depth;
 	}
 	
-	@Override
-	public ResidualAddition load(String string, LayersNetwork model, int position) {
+	public static ResidualAddition load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int firstID = scanner.nextInt();

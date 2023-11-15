@@ -22,15 +22,14 @@ public class TransformerInput extends Layer {
 		positionalEncoding = new PositionalEncoding(embedding);
 	}
 	
-	private TransformerInput(EmbeddingLayer embedding)
+	private TransformerInput(InputLayer inputLayer, EmbeddingLayer embedding, PositionalEncoding positionalEncoding)
 	{
 		super(embedding.inputs, embedding.inputs);
 		depth = embedding.depth;
 		
-		input = new InputLayer(embedding.inputs);
+		this.input = inputLayer;
 		this.embedding = embedding;
-		embedding.lastLayer = input;
-		positionalEncoding = new PositionalEncoding(embedding);
+		this.positionalEncoding = positionalEncoding;
 	}
 	
 	@Override
@@ -51,6 +50,11 @@ public class TransformerInput extends Layer {
 	@Override
 	public String name() {
 		return "Transformer Input";
+	}
+	
+	@Override
+	public String className() {
+		return "TransformerInput";
 	}
 
 	public void setMasking(boolean masking)
@@ -83,22 +87,30 @@ public class TransformerInput extends Layer {
 	
 	@Override
 	public String stringify() {
-		return getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
+		return getId() + " " + input.getId() + " " + positionalEncoding.getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
 	}
 	
-	@Override
-	public TransformerInput load(String string, LayersNetwork model, int position) {
+	public static TransformerInput load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
+		int inputId = scanner.nextInt();
+		int positionalId = scanner.nextInt();
 		int inputs = scanner.nextInt();
 		int depth = scanner.nextInt();
 		int vocabSize = scanner.nextInt();
 		StringBuilder builder = new StringBuilder();
 		while(scanner.hasNextLine())
-			builder.append(scanner.nextLine());
+			builder.append(scanner.nextLine() + "\n");
 		scanner.close();
-		EmbeddingLayer embedding = new EmbeddingLayer(0, 0, 0, false).load(builder.toString(), model, -1);
-		TransformerInput out = new TransformerInput(embedding);
+		InputLayer inputLayer = new InputLayer(inputs);
+		inputLayer.setId(inputId);
+		inputLayer.setModel(model);
+		EmbeddingLayer embedding = EmbeddingLayer.load(builder.toString(), model, -1);
+		embedding.setModel(model);
+		PositionalEncoding encoding = new PositionalEncoding(embedding);
+		encoding.setId(positionalId);
+		encoding.setModel(model);
+		TransformerInput out = new TransformerInput(inputLayer, embedding, encoding);
 		out.setId(id);
 		return out;
 	}

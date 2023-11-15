@@ -41,20 +41,20 @@ public class Decoder extends Layer {
 									 linear, linearResidual, linearNorm};
 	}
 	
-	private Decoder(Layer last, Encoder encoder, AttentionLayer maskedAttention, AttentionLayer attention, StandardLayer linear)
+	private Decoder(Layer last, Encoder encoder, AttentionLayer maskedAttention, ResidualAddition maskedResidualAddition, NormLayer maskedNorm, AttentionLayer attention, ResidualAddition attentionResidual, NormLayer attentionNorm, StandardLayer linear)
 	{
 		super(last, last.outputs);
 		this.maskedAttention = maskedAttention;
-		maskedAttentionResidual = new ResidualAddition(maskedAttention, last);
-		maskedAttentionNorm = new NormLayer(maskedAttentionResidual);
+		this.maskedAttentionResidual = maskedResidualAddition;
+		this.maskedAttentionNorm = maskedNorm;
 		this.attention = attention;
-		attentionResidual = new ResidualAddition(attention, maskedAttentionNorm);
-		attentionNorm = new NormLayer(attentionResidual);
+		this.attentionResidual = attentionResidual;
+		this.attentionNorm = attentionNorm;
 		this.linear = linear;
-		linearResidual = new ResidualAddition(linear, attentionNorm);
-		linearNorm = new NormLayer(linearResidual);
+		this.linearResidual = new ResidualAddition(linear, attentionNorm);
+		this.linearNorm = new NormLayer(linearResidual);
 		this.encoder = encoder;
-		layers = new Layer[]{maskedAttention, maskedAttentionResidual, maskedAttentionNorm,
+		this.layers = new Layer[]{maskedAttention, maskedAttentionResidual, maskedAttentionNorm,
 									 attention, attentionResidual, attentionNorm,
 									 linear, linearResidual, linearNorm};
 	}
@@ -120,7 +120,7 @@ public class Decoder extends Layer {
 	@Override
 	public String stringify() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(getId() + " " + lastLayer.getId() + " " + encoder.getId() + "\n");
+		builder.append(getId() + " " + lastLayer.getId() + " " + encoder.getId() + " " + maskedAttentionNorm.getId() + " " + attentionNorm.getId() + "\n");
 		builder.append(maskedAttention.stringify());
 		builder.append("\n##\n");
 		builder.append(attention.stringify());
@@ -129,21 +129,34 @@ public class Decoder extends Layer {
 		builder.append("\n##\n");
 		return builder.toString();
 	}
-	
-	@Override
-	public Decoder load(String string, LayersNetwork model, int position) {
+
+	public static Decoder load(String string, LayersNetwork model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();
 		int encoderID = scanner.nextInt();
+		int maskedNormID = scanner.nextInt();
+		int normID = scanner.nextInt();
 		scanner.useDelimiter("##");
-		AttentionLayer builder = new AttentionLayer();
-		AttentionLayer maskedAttentionLayer = builder.load(scanner.next(), model, position);
-		AttentionLayer attentionLayer = builder.load(scanner.next(), model, position);
+		AttentionLayer maskedAttentionLayer = AttentionLayer.load(scanner.next(), model, position);
+		model.reportLayer(maskedAttentionLayer);
+		
+		ResidualAddition maskedResidualAddition = new ResidualAddition(maskedAttentionLayer, model.getLayerByID(lastID));
+		NormLayer maskedNorm = new NormLayer(maskedResidualAddition);
+		maskedNorm.setId(maskedNormID);
+		model.reportLayer(maskedNorm);
+		
+		AttentionLayer attentionLayer = AttentionLayer.load(scanner.next(), model, position);
 		model.reportLayer(attentionLayer);
-		StandardLayer linear = attentionLayer.keyLinear.load(scanner.next(), model, position);
+		
+		ResidualAddition residualAddition = new ResidualAddition(attentionLayer, maskedNorm);
+		NormLayer norm = new NormLayer(residualAddition);
+		norm.setId(normID);
+		model.reportLayer(norm);	
+		
+		StandardLayer linear = StandardLayer.load(scanner.next(), model, position);
 		scanner.close();
-		Decoder out = new Decoder(model.getLayerByID(lastID), (Encoder)model.getLayerByID(encoderID), maskedAttentionLayer, attentionLayer, linear);
+		Decoder out = new Decoder(model.getLayerByID(lastID), (Encoder)model.getLayerByID(encoderID), maskedAttentionLayer, maskedResidualAddition, maskedNorm, attentionLayer, residualAddition, norm, linear);
 		out.setId(id);
 		return out;
 	}

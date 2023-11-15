@@ -1,5 +1,8 @@
 package common.network.layers;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.text.DecimalFormat;
 
 import org.ejml.simple.SimpleMatrix;
@@ -80,6 +83,16 @@ public class LayersMain {
 		{
 			softModel.feedForward(softTraining[i][0]);
 		}
+		
+		File out = new File("C:\\AIClub\\Test\\linear.txt");
+		try {
+			FileWriter writer = new FileWriter(out);
+			writer.write(softModel.stringify());
+			writer.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}	
 	}
 	
 	

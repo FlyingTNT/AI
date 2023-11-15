@@ -15,7 +15,7 @@ public class TransMain3 {
 	static String DATA_FOLDER = "C:\\AIClub\\Code\\Small Dataset\\Tokenized";
 	
 	public static void main(String[] args) {
-		TransformerModel transformer = new TransformerModel(LEARNING_RATE, SEQUENCE_LENGTH, EMBED_DEPTH, VOCAB_SIZE, HEADS, TRANSFORMER_STACK_SIZE);
+		TransformerModel transformer = new TransformerModel(LEARNING_RATE, SEQUENCE_LENGTH, SEQUENCE_LENGTH, EMBED_DEPTH, VOCAB_SIZE, VOCAB_SIZE, HEADS, TRANSFORMER_STACK_SIZE);
 		
 		float[][] problemsTokenized = DatasetLoader.loadProblems(DATA_FOLDER);
 		float[][] submissionsTokenized = DatasetLoader.loadSubmissions(DATA_FOLDER);

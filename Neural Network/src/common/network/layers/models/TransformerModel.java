@@ -1,6 +1,8 @@
 package common.network.layers.models;
 
 import java.util.ArrayList;
+import java.util.Scanner;
+
 import org.ejml.simple.SimpleMatrix;
 import common.network.layers.Activation;
 import common.network.layers.Cost;
@@ -14,9 +16,11 @@ import common.network.math.NetworkMath;
 
 public class TransformerModel extends LayersNetwork{
 
-	int sequenceLength;
+	int encoderSequenceLength;
+	int decoderSequenceLength;
 	int embeddingDepth;
-	int vocabSize;
+	int encoderVocabSize;
+	int decoderVocabSize;
 	int heads;
 	int EOS;
 	int BOS;
@@ -31,23 +35,24 @@ public class TransformerModel extends LayersNetwork{
 	StandardLayer outputLinear;
 	RotationLayer output;
 	
-	public TransformerModel(float learningRate, int sequenceLength, int embeddingDepth, int vocabSize, int heads, int layers) {
-		this.sequenceLength = sequenceLength;
+	public TransformerModel(float learningRate, int encoderSequenceLength, int decoderSequenceLength, int embeddingDepth, int encoderVocabSize, int decoderVocabSize, int heads, int layers) {
+		this.encoderSequenceLength = encoderSequenceLength;
+		this.decoderSequenceLength = decoderSequenceLength;
 		this.embeddingDepth = embeddingDepth;
-		this.vocabSize = vocabSize;
-		this.EOS = this.vocabSize - 1;
+		this.encoderVocabSize = encoderVocabSize;
+		this.decoderVocabSize = decoderVocabSize;
+		this.EOS = this.decoderVocabSize - 1;
 		this.heads = heads;
 		this.learningRate = learningRate;
 		this.cost = Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY;
 		
 		PADDING = -1;
 		BOS = 0;
-		EOS = vocabSize+1;
-		this.vocabSize += 2;
-		vocabSize = this.vocabSize;
+		this.decoderVocabSize += 2;
+		this.encoderVocabSize += 1;
 		
-		encoderIn = new TransformerInput(sequenceLength, embeddingDepth, vocabSize);
-		decoderIn = new TransformerInput(sequenceLength, embeddingDepth, vocabSize);
+		encoderIn = new TransformerInput(encoderSequenceLength, embeddingDepth, this.encoderVocabSize);
+		decoderIn = new TransformerInput(decoderSequenceLength, embeddingDepth, this.decoderVocabSize);
 		
 		encoders = new Encoder[layers];
 		decoders = new Decoder[layers];
@@ -62,7 +67,7 @@ public class TransformerModel extends LayersNetwork{
 		}
 		
 		rotate = new RotationLayer(decoders[decoders.length - 1]);
-		outputLinear = new StandardLayer(rotate, vocabSize, Activation.SOFTMAX);
+		outputLinear = new StandardLayer(rotate, this.decoderVocabSize, Activation.SOFTMAX);
 		output = new RotationLayer(outputLinear);
 		
 		model = new Layer[2*(layers+1) + 3];
@@ -83,6 +88,27 @@ public class TransformerModel extends LayersNetwork{
 		{
 			model[i].setModel(this);
 		}
+	}
+	
+	private TransformerModel(int encoderSequenceLength, int decoderSequenceLength, int embeddingDepth, int encoderVocabSize, int decoderVocabSize, int heads, int layers)
+	{
+		this.encoderSequenceLength = encoderSequenceLength;
+		this.decoderSequenceLength = decoderSequenceLength;
+		this.embeddingDepth = embeddingDepth;
+		this.encoderVocabSize = encoderVocabSize;
+		this.decoderVocabSize = decoderVocabSize;
+		this.EOS = this.decoderVocabSize - 1;
+		this.heads = heads;
+		this.learningRate = 0;
+		this.cost = Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY;
+		
+		PADDING = -1;
+		BOS = 0;
+		
+		encoders = new Encoder[layers];
+		decoders = new Decoder[layers];
+		
+		model = new Layer[2*(layers+1) + 3];
 	}
 	
 	@Override
@@ -146,10 +172,10 @@ public class TransformerModel extends LayersNetwork{
 			encoders[i].activation(null);
 		}
 		
-		SimpleMatrix currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+		SimpleMatrix currentIn = SimpleMatrix.filled(decoderSequenceLength+1, 1, PADDING);
 		currentIn.set(0, BOS);
 		
-		for(int i = 0; i < sequenceLength; i++)
+		for(int i = 0; i < decoderSequenceLength; i++)
 		{
 			//System.out.println("\nDecoder input:");
 			//currentIn.print();
@@ -231,7 +257,7 @@ public class TransformerModel extends LayersNetwork{
 			encoders[i].activation(null);
 		}
 		
-		SimpleMatrix currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+		SimpleMatrix currentIn = SimpleMatrix.filled(decoderSequenceLength+1, 1, PADDING);
 		currentIn.set(0, BOS);
 		
 		SimpleMatrix[] currentBest = new SimpleMatrix[width];
@@ -247,13 +273,13 @@ public class TransformerModel extends LayersNetwork{
 			topProbabilities.add(Double.NEGATIVE_INFINITY);
 		}
 		
-		for(int i = 0; i < vocabSize; i++)
+		for(int i = 0; i < decoderVocabSize; i++)
 		{
 			for(int j = 0; j < width; j++)
 			{
 				if(Math.log(out.get(0, i)) > topProbabilities.get(j) || topProbabilities.get(j) == Double.NEGATIVE_INFINITY)
 				{
-					currentIn = SimpleMatrix.filled(sequenceLength+1, 1, PADDING);
+					currentIn = SimpleMatrix.filled(decoderSequenceLength+1, 1, PADDING);
 					currentIn.set(0, BOS);
 					currentIn.set(1, i);
 					
@@ -272,7 +298,7 @@ public class TransformerModel extends LayersNetwork{
 		currentBest = best.toArray(currentBest);
 		currentProbabilities = topProbabilities.toArray(currentProbabilities);
 		
-		for(int i = 2; i < sequenceLength + 1; i++)
+		for(int i = 2; i < decoderSequenceLength + 1; i++)
 		{
 			best.clear();
 			topProbabilities.clear();
@@ -285,7 +311,7 @@ public class TransformerModel extends LayersNetwork{
 					continue;
 				out = doDecoder(currentBest[j]);
 				
-				for(int k = 0; k < vocabSize; k++)
+				for(int k = 0; k < decoderVocabSize; k++)
 				{
 					double probability = Math.log(out.get(i-1, k)) + currentProbabilities[j];
 					
@@ -342,8 +368,105 @@ public class TransformerModel extends LayersNetwork{
 	}
 	
 	@Override
+	public String stringify() {
+		StringBuilder out = new StringBuilder("Transformer " + rotate.getId() + " " + encoderSequenceLength + " " + decoderSequenceLength + " " + embeddingDepth + " " + encoderVocabSize + " " + 
+					 decoderVocabSize + " " +  heads + " " + decoders.length + "\n");
+		out.append(encoderIn.className());
+		out.append("\n||");
+		out.append(encoderIn.stringify());
+		out.append("\n||");
+		out.append(decoderIn.className());
+		out.append("\n||");
+		out.append(decoderIn.stringify());
+		out.append("\n||");
+		for(int i = 0; i < encoders.length; i++)
+		{
+			out.append(encoders[i].className());
+			out.append("\n||");
+			out.append(encoders[i].stringify());
+			out.append("\n||");
+			out.append(decoders[i].className());
+			out.append("\n||");
+			out.append(decoders[i].stringify());
+			out.append("\n||");
+		}
+		
+		out.append(outputLinear.className());
+		out.append("\n||");
+		out.append(outputLinear.stringify());
+		out.append("\n||");
+		return out.toString();
+	}
+	
+	public static TransformerModel load(String string)
+	{
+		Scanner scanner = new Scanner(string);
+		if(!scanner.next().equals("Transformer"))
+		{
+			scanner.close();
+			throw new IllegalArgumentException("Model type is not transformer!");
+		}
+		
+		int rotateID = scanner.nextInt();
+		int encoderSequenceLength = scanner.nextInt();
+		int decoderSequenceLength = scanner.nextInt();
+		int embedDepth = scanner.nextInt();
+		int encoderVocabSize = scanner.nextInt();
+		int decoderVocabSize = scanner.nextInt();
+		int heads = scanner.nextInt();
+		int layers = scanner.nextInt();
+		
+		TransformerModel model = new TransformerModel(encoderSequenceLength, decoderSequenceLength, embedDepth, encoderVocabSize, decoderVocabSize, heads, layers);
+		
+		scanner.useDelimiter("\\|\\|");
+		
+		scanner.next();//Clear class name
+		model.encoderIn = TransformerInput.load(scanner.next(), model, 0);
+		model.model[0] = model.encoderIn;
+		model.reportLayer(model.model[0]);
+		
+		scanner.next();//Clear class name
+		model.decoderIn = TransformerInput.load(scanner.next(), model, 1);
+		model.model[1] = model.decoderIn;
+		model.reportLayer(model.model[1]);
+		
+		for(int i = 0; i < layers; i++)
+		{
+			scanner.next();//Clear class name
+			model.encoders[i] = Encoder.load(scanner.next(), model, 2*i+2);
+			model.model[2*i+2] = model.encoders[i];
+			model.reportLayer(model.model[2*i+2]);
+			
+			scanner.next();//Clear class name
+			model.decoders[i] = Decoder.load(scanner.next(), model, 2*i+3);
+			model.model[2*i+3] = model.decoders[i];
+			model.reportLayer(model.model[2*i+3]);
+		}
+		
+		model.rotate = new RotationLayer(model.decoders[layers-1]);
+		model.model[2*layers+2] = model.rotate;
+		model.rotate.setId(rotateID);
+		model.reportLayer(model.rotate);
+		
+		scanner.next();//Clear class name
+		model.outputLinear = StandardLayer.load(scanner.next(), model, 2*layers+3);
+		model.model[2*layers+3] = model.outputLinear;
+		model.reportLayer(model.outputLinear);
+		
+		model.output = new RotationLayer(model.outputLinear);
+		model.model[2*layers+4] = model.output;
+		model.reportLayer(model.output);
+		
+		for(Layer layer : model.model)
+			layer.setModel(model);
+		
+		scanner.close();
+		return model;
+	}
+	
+	@Override
 	public String toString() {
-		String out = "Model: (" + sequenceLength + ", " + 1 + ") -> (" + sequenceLength + ", " + vocabSize + ")\n";
+		String out = "Model: (" + encoderSequenceLength + ", " + 1 + ") -> (" + decoderSequenceLength + ", " + decoderVocabSize + ")\n";
 		for(int i = 0; i < model.length; i++)
 		{
 			out += model[i] + "\n";
