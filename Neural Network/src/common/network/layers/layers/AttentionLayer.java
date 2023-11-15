@@ -33,7 +33,6 @@ public class AttentionLayer extends Layer {
 		super(querySource.outputs, querySource.outputs);
 		depth = querySource.depth;
 		setGradientSize(outputs, depth);
-		querySource.nextLayer = this;
 		this.valueSource = valueSource;
 		this.keySource = keySource;
 		this.querySource = querySource;

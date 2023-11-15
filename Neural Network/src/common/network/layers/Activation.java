@@ -3,29 +3,59 @@ package common.network.layers;
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
 
+/**
+ * An interface that represents an activation function for a {@link Layer}. Usually a {@link StandardLayer}
+ * @author C. Cooper
+ */
 public interface Activation {
-	
+	/**
+	 * Calculates the activation of the given matrix.
+	 * @param values The values to take the activation of.
+	 * @return The activation of the given values.
+	 */
 	SimpleMatrix activation(SimpleMatrix values);
+	
+	/**
+	 * Calculates the derivative of this layer given a gradient matrix.
+	 * <br><br>
+	 * Generally not used because some activations, like {@link #SOFTMAX softmax}, also require inputs to calculate their derivatives.
+	 * In this case, {@link #error(SimpleMatrix, SimpleMatrix) error(input, gradient)} is used.
+	 * @param values A gradient.
+	 * @return The derivative of this activation given the gradient.
+	 */
 	SimpleMatrix derivative(SimpleMatrix values);
+	
+	/**
+	 * Given an input to this activation and the error coming out of the next layer, calculates the error of this activation.
+	 * @param input The input to this activation that corresponds to the given error.
+	 * @param nextWeightedError The error coming out of the next layer.
+	 * @return The error of this activation.
+	 */
 	SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError);
+	
+	/**
+	 * The name of this activation.
+	 * @return The name of this activation.
+	 */
 	String name();
 	
+	/**
+	 * Sigmoid activation.
+	 */
 	public static Activation SIGMOID = new Activation() {
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
-			return values.elementOp(new ElementOpReal() {
-				
+			return values.elementOp(new ElementOpReal() {//Applies the given function to each element in the given matrix.
 				@Override
 				public double op(int row, int col, double value) {
-					return 1/(1+Math.exp(-value));
+					return 1/(1+Math.exp(-value));//Applies the sigmoid function.
 				}
 			});
 		}
 		
 		@Override
 		public SimpleMatrix derivative(SimpleMatrix values) {
-			return values.elementOp(new ElementOpReal() {
-				
+			return values.elementOp(new ElementOpReal() {//Calculates the sigmoid derivative for each position.
 				@Override
 				public double op(int row, int col, double value) {
 					double val = 1/(1+Math.exp(-value));
@@ -36,8 +66,7 @@ public interface Activation {
 		
 		@Override
 		public SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError) {
-			return input.elementOp(new ElementOpReal() {
-				
+			return input.elementOp(new ElementOpReal() {//Calculates the sigmoid derivative for each position.
 				@Override
 				public double op(int row, int col, double value) {
 					double val = 1/(1+Math.exp(-value));
@@ -52,6 +81,9 @@ public interface Activation {
 		}
 	};
 	
+	/**
+	 * The softmax activation. Each layer is output x depth. Takes softmax along the output axis.
+	 */
 	public static Activation SOFTMAX = new Activation() {
 		
 		@Override
@@ -59,42 +91,47 @@ public interface Activation {
 			throw new IllegalStateException("DOES NOT WORK DO NOT USE; USE ERROR");
 		}
 		
-		@Override//I have confirmed this derivative
+		@Override
 		public SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError) {
 			SimpleMatrix softmax = activation(input);
 			SimpleMatrix error = softmax.elementMult(nextWeightedError);
 			
 			float[][] out = new float[input.getNumRows()][input.getNumCols()];
 			for(int d = 0; d < input.getNumCols(); d++)
-			for(int output = 0; output < input.getNumRows(); output++)
-			{
-				for(int in = 0; in < input.getNumRows(); in++)
+				for(int output = 0; output < input.getNumRows(); output++)
 				{
-					//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Sig(i) * ((i==j?1:0) - Sig(j));
-					if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
+					for(int in = 0; in < input.getNumRows(); in++)
 					{
-						out[in][d] += (1 - softmax.get(in, d)) * error.get(output, d);
-					}else {
-						out[in][d] += -softmax.get(in, d)* error.get(output, d);
+						//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Soft(i) * ((i==j?1:0) - Soft(j));
+						if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
+						{
+							out[in][d] += (1 - softmax.get(in, d)) * error.get(output, d);//error(out, d) = soft(out, d) * nextError(out, d)
+						}else {
+							out[in][d] += -softmax.get(in, d)* error.get(output, d);//error(out, d) = soft(out, d) * nextError(out, d)
+						}
 					}
 				}
-			}
 			
 			return new SimpleMatrix(out);
 		}
 		
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
-			values = values.copy();
-			double[] maxes = new double[values.getNumCols()]; 
-			for(int i = 0; i < values.getNumCols(); i++)
+			values = values.copy();//Copies values because this function modifies it.
+			double[] maxes = new double[values.getNumCols()];//The maxes of each depth
+			for(int i = 0; i < values.getNumCols(); i++)//Subtracts each column's max from each element in that column to give the function numeric stability. 
 			{
 				maxes[i] = values.getColumn(i).elementMax();
 				values.setColumn(i, values.getColumn(i).minus(maxes[i]));
 			}
 			
-			SimpleMatrix exp = values.elementExp();
+			SimpleMatrix exp = values.elementExp();//e^value for each value in values
 			
+			/*
+			 * For each column in exp, if its max isn't infinite, divides that column by the sum of the elements in that column.
+			 * If it is infinite, sets each item in the column to 1/{# of rows}. This is done because when masking is applied, 
+			 * all of the values could be -Infinity, which would cause an error.
+			 */
 			for(int d = 0; d < values.getNumCols(); d++)
 				exp.setColumn(d, Double.isFinite(maxes[d]) ? exp.getColumn(d).divide(exp.getColumn(d).elementSum()) : new SimpleMatrix(1, values.getNumRows()));
 			return exp;
@@ -106,7 +143,9 @@ public interface Activation {
 		}
 	};
 	
-	//VERIFIED
+	/**
+	 * The softmax activation. Each layer is output x depth. Takes softmax along the depth axis.
+	 */
 	public static Activation SOFTMAX_DEPTHWISE = new Activation() {
 		
 		@Override
@@ -121,35 +160,41 @@ public interface Activation {
 			
 			float[][] out = new float[input.getNumRows()][input.getNumCols()];
 			for(int w = 0; w < input.getNumRows(); w++)
-			for(int output = 0; output < input.getNumCols(); output++)
-			{
-				for(int in = 0; in < input.getNumCols(); in++)
+				for(int output = 0; output < input.getNumCols(); output++)
 				{
-					//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Sig(i) * ((i==j?1:0) - Sig(j));
-					if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
+					for(int in = 0; in < input.getNumCols(); in++)
 					{
-						out[w][in] += (1 - softmax.get(w, in)) * error.get(w, output);
-					}else {
-						out[w][in] += -softmax.get(w, in)* error.get(w, output);
+						//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Sig(i) * ((i==j?1:0) - Sig(j));
+						if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
+						{
+							out[w][in] += (1 - softmax.get(w, in)) * error.get(w, output);//Error(w, out) = soft(w, out) * nextError(w, out)
+						}else {
+							out[w][in] += -softmax.get(w, in)* error.get(w, output);//Error(w, out) = soft(w, out) * nextError(w, out)
+						}
 					}
 				}
-			}
 			
 			return new SimpleMatrix(out);
 		}
 		
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
-			values = values.copy();
-			double[] maxes = new double[values.getNumRows()]; 
-			for(int i = 0; i < values.getNumRows(); i++)
+			values = values.copy();//Copies values because this function modifies it.
+			double[] maxes = new double[values.getNumRows()];//The max of each row
+			for(int i = 0; i < values.getNumRows(); i++)//Subtracts each row's max from each element in that row to give the function numeric stability. 
 			{
 				maxes[i] = values.getRow(i).elementMax();
 				values.setRow(i, values.getRow(i).minus(maxes[i]));
 			}
 				
 			
-			SimpleMatrix exps = values.elementExp();
+			SimpleMatrix exps = values.elementExp();//e^value for each value
+			
+			/*
+			 * For each row in exp, if its max isn't infinite, divides that row by the sum of the elements in that row.
+			 * If it is infinite, sets each item in the row to 1/{# of columns}. This is done because when masking is applied, 
+			 * all of the values could be -Infinity, which would cause an error.
+			 */
 			for(int i = 0; i < values.getNumRows(); i++)
 				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 0));
 			return exps;
@@ -161,6 +206,9 @@ public interface Activation {
 		}
 	};
 	
+	/**
+	 * No activation.
+	 */
 	public static Activation NONE = new Activation() {
 		
 		@Override
@@ -184,6 +232,9 @@ public interface Activation {
 		}
 	};
 	
+	/**
+	 * Rectified Linear Unit activation.
+	 */
 	public static Activation RELU = new Activation() {
 		
 		@Override
@@ -194,7 +245,6 @@ public interface Activation {
 		@Override
 		public SimpleMatrix error(SimpleMatrix input, SimpleMatrix nextWeightedError) {
 			return nextWeightedError.elementOp(new ElementOpReal() {
-				
 				@Override
 				public double op(int row, int col, double value) {
 					return input.get(row, col) > 0 ? value : 0;
@@ -204,19 +254,12 @@ public interface Activation {
 		
 		@Override
 		public SimpleMatrix derivative(SimpleMatrix values) {
-			return values.elementOp(new ElementOpReal() {
-				
-				@Override
-				public double op(int row, int col, double value) {
-					return value > 0 ? 1 : 0;
-				}
-			});
+			throw new IllegalStateException("DOES NOT WORK DO NOT USE; USE ERROR");
 		}
 		
 		@Override
 		public SimpleMatrix activation(SimpleMatrix values) {
 				return values.elementOp(new ElementOpReal() {
-				
 				@Override
 				public double op(int row, int col, double value) {
 					return value > 0 ? value : 0;
