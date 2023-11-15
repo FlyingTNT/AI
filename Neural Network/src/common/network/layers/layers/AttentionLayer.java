@@ -4,7 +4,7 @@ import java.util.Scanner;
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
 import common.network.layers.Activation;
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class AttentionLayer extends Layer {
 	
@@ -204,7 +204,7 @@ public class AttentionLayer extends Layer {
 	}
 	
 	@Override
-	public void setModel(LayersNetwork model) {
+	public void setModel(LayersModel model) {
 		this.model = model;
 		queryLinear.setModel(model);
 		valueLinear.setModel(model);
@@ -226,7 +226,7 @@ public class AttentionLayer extends Layer {
 		+ "\n" + valueLinear.stringify() + "\n$$\n" + keyLinear.stringify() + "\n$$\n" + queryLinear.stringify() + "\n$$\n";
 	}
 
-	public static AttentionLayer load(String string, LayersNetwork model, int position) {
+	public static AttentionLayer load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int valueID = scanner.nextInt();

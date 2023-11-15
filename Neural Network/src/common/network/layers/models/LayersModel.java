@@ -17,7 +17,7 @@ import common.network.layers.layers.RotationLayer;
 import common.network.layers.layers.StandardLayer;
 import common.network.layers.layers.TransformerInput;
 
-public class LayersNetwork {
+public class LayersModel {
 
 	protected float learningRate;
 	protected Layer[] model;
@@ -27,9 +27,9 @@ public class LayersNetwork {
 	private boolean[] masks;
 	private ArrayList<Layer> layersList;
 	
-	public LayersNetwork() {layersList = new ArrayList<>();}
+	public LayersModel() {layersList = new ArrayList<>();}
 	
-	public LayersNetwork(float learningRate, Cost cost, Layer... layers) {
+	public LayersModel(float learningRate, Cost cost, Layer... layers) {
 		layersList = new ArrayList<>();
 		this.learningRate = learningRate;
 		this.model = layers;
@@ -114,10 +114,10 @@ public class LayersNetwork {
 		return out;
 	}
 	
-	public static LayersNetwork load(String model)
+	public static LayersModel load(String model)
 	{
 		Scanner scanner = new Scanner(model);
-		LayersNetwork layers = new LayersNetwork();
+		LayersModel layers = new LayersModel();
 		String name = scanner.next();
 		if(!name.equals("Model"))
 		{

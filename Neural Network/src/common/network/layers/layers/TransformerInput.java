@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class TransformerInput extends Layer {
 
@@ -73,7 +73,7 @@ public class TransformerInput extends Layer {
 	}
 	
 	@Override
-	public void setModel(LayersNetwork model) {
+	public void setModel(LayersModel model) {
 		super.setModel(model);
 		input.setModel(model);
 		embedding.setModel(model);
@@ -90,7 +90,7 @@ public class TransformerInput extends Layer {
 		return getId() + " " + input.getId() + " " + positionalEncoding.getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
 	}
 	
-	public static TransformerInput load(String string, LayersNetwork model, int position) {
+	public static TransformerInput load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int inputId = scanner.nextInt();

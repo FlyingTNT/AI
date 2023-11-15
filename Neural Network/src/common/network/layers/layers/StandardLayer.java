@@ -6,7 +6,7 @@ import java.util.Scanner;
 import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.Activation;
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class StandardLayer extends Layer{
 
@@ -173,7 +173,7 @@ public class StandardLayer extends Layer{
 		return out;
 	}
 
-	public static StandardLayer load(String string, LayersNetwork model, int position) {
+	public static StandardLayer load(String string, LayersModel model, int position) {
 		StandardLayer out;
 
 		Scanner scanner = new Scanner(string);

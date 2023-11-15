@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class InputLayer extends Layer{
 
@@ -31,7 +31,7 @@ public class InputLayer extends Layer{
 		return getId() + " " + inputs;
 	}
 
-	public static InputLayer load(String string, LayersNetwork model, int position) {
+	public static InputLayer load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int inputs = scanner.nextInt();

@@ -5,7 +5,7 @@ import java.util.Scanner;
 import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.Activation;
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class Decoder extends Layer {
 
@@ -95,7 +95,7 @@ public class Decoder extends Layer {
 	}
 	
 	@Override
-	public void setModel(LayersNetwork model) {
+	public void setModel(LayersModel model) {
 		super.setModel(model);
 		for(Layer layer : layers)
 			layer.setModel(model);
@@ -130,7 +130,7 @@ public class Decoder extends Layer {
 		return builder.toString();
 	}
 
-	public static Decoder load(String string, LayersNetwork model, int position) {
+	public static Decoder load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class NormLayer extends Layer{
 
@@ -132,7 +132,7 @@ public class NormLayer extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + outputs;
 	}
 	
-	public static NormLayer load(String string, LayersNetwork model, int pos) {
+	public static NormLayer load(String string, LayersModel model, int pos) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastId = scanner.nextInt();

@@ -12,12 +12,12 @@ import common.network.layers.layers.FlattenLayer;
 import common.network.layers.layers.InputLayer;
 import common.network.layers.layers.RotationLayer;
 import common.network.layers.layers.StandardLayer;
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class LayersMain {
 
 	public static void main(String[] args) {
-		LayersNetwork network;
+		LayersModel network;
 		
 		SimpleMatrix[][] training = new SimpleMatrix[256][2];
 		
@@ -36,7 +36,7 @@ public class LayersMain {
 		
 		InputLayer inputLayer = new InputLayer(8);
 		StandardLayer outputLayer = new StandardLayer(inputLayer, 8, Activation.SIGMOID);
-		network = new LayersNetwork(0.05f, Cost.QUADRATIC, inputLayer, outputLayer);
+		network = new LayersModel(0.05f, Cost.QUADRATIC, inputLayer, outputLayer);
 		
 		network.feedForward(new SimpleMatrix(new float[][]{{1}, {1}, {1}, {1}, {1}, {1}, {1}, {1}})).print();
 		
@@ -63,12 +63,12 @@ public class LayersMain {
 			softTraining[i][1] = SimpleMatrix.filled(1, 1, i);
 		}
 												  
-        LayersNetwork softModel;
+        LayersModel softModel;
         InputLayer softIn = new InputLayer(1);
         EmbeddingLayer softMid = new EmbeddingLayer(softIn, 4, 4, false);
         //RotationLayer softFlat = new RotationLayer(softMid);
         StandardLayer softOut = new StandardLayer(softMid, 1, Activation.SOFTMAX_DEPTHWISE);
-        softModel = new LayersNetwork(0.10f, Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY, softIn, softMid, softOut);
+        softModel = new LayersModel(0.10f, Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY, softIn, softMid, softOut);
         
         System.out.println(softModel);
 		

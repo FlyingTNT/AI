@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class RotationLayer extends Layer{
 
@@ -40,7 +40,7 @@ public class RotationLayer extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + outputs + " " + depth + "\n"; 
 	}
 	
-	public static RotationLayer load(String string, LayersNetwork model, int position) {
+	public static RotationLayer load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

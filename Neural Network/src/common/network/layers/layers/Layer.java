@@ -1,23 +1,24 @@
 package common.network.layers.layers;
 
 import org.ejml.simple.SimpleMatrix;
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 import common.network.math.NetworkMath;
 
+/**
+ * Represents a layer in a {@link common.network.layers.models.LayersModel LayersModel}
+ * @author C. Cooper
+ */
 public abstract class Layer {
-	
 	public final int inputs;
 	public final int outputs;
 	int depth = 1;
 	Layer lastLayer;
 	Layer nextLayer;
 	protected SimpleMatrix lastActivation;
-	public LayersNetwork model;
+	public LayersModel model;
 	public boolean[] masks;
 	private SimpleMatrix gradient;
 	private int id = -1;
-	
-	protected Layer(){outputs = 0;inputs = 0;};
 	
 	public Layer(int inputs, int outputs)
 	{
@@ -70,7 +71,7 @@ public abstract class Layer {
 		return lastActivation;
 	}
 	
-	public void setModel(LayersNetwork model) {
+	public void setModel(LayersModel model) {
 		this.model = model;
 		if(id == -1)
 			id = model.getNextID();

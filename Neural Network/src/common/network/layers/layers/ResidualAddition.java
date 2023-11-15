@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class ResidualAddition extends Layer {
 
@@ -45,7 +45,7 @@ public class ResidualAddition extends Layer {
 		return getId() + " " + lastLayer.getId() + " " + residual.getId() + " " + inputs + " " + depth;
 	}
 	
-	public static ResidualAddition load(String string, LayersNetwork model, int position) {
+	public static ResidualAddition load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int firstID = scanner.nextInt();

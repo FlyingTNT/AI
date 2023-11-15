@@ -5,7 +5,7 @@ import java.util.Scanner;
 import org.ejml.simple.SimpleMatrix;
 import org.ejml.simple.SimpleOperations.ElementOpReal;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class PositionalEncoding extends Layer{
 
@@ -100,7 +100,7 @@ public class PositionalEncoding extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth;
 	}
 	
-	public static PositionalEncoding load(String string, LayersNetwork model, int position) {
+	public static PositionalEncoding load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastID = scanner.nextInt();

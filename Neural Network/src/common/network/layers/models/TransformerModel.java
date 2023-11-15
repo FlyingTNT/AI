@@ -14,7 +14,7 @@ import common.network.layers.layers.StandardLayer;
 import common.network.layers.layers.TransformerInput;
 import common.network.math.NetworkMath;
 
-public class TransformerModel extends LayersNetwork{
+public class TransformerModel extends LayersModel{
 
 	int encoderSequenceLength;
 	int decoderSequenceLength;

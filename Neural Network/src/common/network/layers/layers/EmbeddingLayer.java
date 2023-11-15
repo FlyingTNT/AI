@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 import org.ejml.simple.SimpleMatrix;
 
-import common.network.layers.models.LayersNetwork;
+import common.network.layers.models.LayersModel;
 
 public class EmbeddingLayer extends Layer {
 
@@ -123,7 +123,7 @@ public class EmbeddingLayer extends Layer {
 		return out.toString();
 	}
 
-	public static EmbeddingLayer load(String string, LayersNetwork model, int position) {
+	public static EmbeddingLayer load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
 		int lastId = scanner.nextInt();
