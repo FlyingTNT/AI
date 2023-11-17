@@ -8,6 +8,7 @@ import common.network.layers.Cost;
 import common.network.layers.layers.Decoder;
 import common.network.layers.layers.EmbeddingLayer;
 import common.network.layers.layers.Encoder;
+import common.network.layers.layers.FlattenLayer;
 import common.network.layers.layers.InputLayer;
 import common.network.layers.layers.Layer;
 import common.network.layers.layers.NormLayer;
@@ -212,6 +213,9 @@ public class LayersModel {
 				break;
 			case "TransformerInput":
 				layer = TransformerInput.load(load, layers, i);
+				break;
+			case "Flatten":
+				layer = FlattenLayer.load(load, layers);
 				break;
 			default:
 				throw new IllegalArgumentException("Unknown layer type: " + type);
