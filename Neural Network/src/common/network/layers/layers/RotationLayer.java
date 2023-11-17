@@ -16,7 +16,7 @@ public class RotationLayer extends Layer{
 	}
 
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
 		masks = lastLayer.getMasks();
 		lastActivation = lastLayer.getLastActivation().transpose();
 		return lastActivation;

@@ -16,7 +16,7 @@ public class ResidualAddition extends Layer {
 	}
 
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
 		masks = lastLayer.getMasks();
 		lastActivation = lastLayer.getLastActivation().plus(residual.getLastActivation());
 		return lastActivation;

@@ -22,7 +22,7 @@ public class Encoder extends Layer{
 		super(lastLayer, lastLayer.outputs);
 		this.depth = lastLayer.depth;
 		
-		attention = new AttentionLayer(lastLayer, lastLayer, lastLayer, heads, masking, false);
+		attention = new AttentionLayer(lastLayer, lastLayer, lastLayer, heads, false, masking, false);
 		attentionResidual = new ResidualAddition(attention, lastLayer);
 		attentionNorm = new NormLayer(attentionResidual);
 		linear = new StandardLayer(attentionNorm, lastLayer.outputs, Activation.RELU);
@@ -47,9 +47,9 @@ public class Encoder extends Layer{
 	}
 
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
 		for(Layer layer : layers)
-			layer.activation(null);
+			layer.activation(null, isInference);
 		return lastActivation;
 	}
 

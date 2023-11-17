@@ -7,28 +7,36 @@ import org.ejml.simple.SimpleOperations.ElementOpReal;
 
 import common.network.layers.models.LayersModel;
 
+/**
+ * Positional Encoding layer.
+ * @author C. Cooper
+ */
 public class PositionalEncoding extends Layer{
 
-	SimpleMatrix matrix;
+	SimpleMatrix matrix;//The positional encoding matrix
 	
+	/**
+	 * Creates a PositionalEncoding layer that applies the encoding to the given {@link EmbeddingLayer}
+	 * @param last The {@link EmbeddingLayer} to apply positional encoding to.
+	 */
 	public PositionalEncoding(EmbeddingLayer last) {
 		super(last.outputs, last.outputs);
 		lastLayer = last;
 		depth = last.depth;
-		matrix = new SimpleMatrix(generatePositionalEncoding(outputs, depth));
+		matrix = new SimpleMatrix(generatePositionalEncoding(outputs, depth));//Pre-generates the encoding matrix
 		setGradientSize(inputs, depth);
 	}
 
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
-		masks = lastLayer.getMasks();
-		lastActivation = lastLayer.getLastActivation().plus(matrix);	
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		masks = lastLayer.getMasks();//Pulls the masks forward
+		lastActivation = lastLayer.getLastActivation().plus(matrix);//Adds the encoding matrix to the last layer's activation	
 		return lastActivation;
 	}
 
 	@Override
 	public void backprop() {
-		lastLayer.reportGradient(getGradient());
+		lastLayer.reportGradient(getGradient());//Just sends the gradient backwards (this layer is constant so it doesn't affect the gradient)
 		clearGradients();
 	}
 
@@ -100,6 +108,13 @@ public class PositionalEncoding extends Layer{
 		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth;
 	}
 	
+	/**
+	 * Loads a PositionalEncoding layer based on a string produced by {@link #stringify()}.
+	 * @param string A string produced by {@link #stringify()}.
+	 * @param model The model this layer belongs to.
+	 * @param position The position of this layer in the model (not used).
+	 * @return An AttentionLayer based on the given String.
+	 */
 	public static PositionalEncoding load(String string, LayersModel model, int position) {
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();

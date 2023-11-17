@@ -17,7 +17,7 @@ public abstract class Layer {
 	Layer lastLayer;//The layer that precedes this one
 	protected SimpleMatrix lastActivation;//This layer's last activation. Used for forward propagation and sometimes for backpropagation
 	public LayersModel model;//The model this layer belongs to
-	public boolean[] masks;//An array representing which of this layer's outputs should be masked
+	protected boolean[] masks;//An array representing which of this layer's outputs should be masked
 	private SimpleMatrix gradient;//The gradient coming into this layer during backprop.
 	private int id = -1;//This layer's id
 	
@@ -61,9 +61,10 @@ public abstract class Layer {
 	 * {@link Layer#getLastActivation() getLastActivation()} method to get their input. As a result, the input parameter is
 	 * only used by {@link InputLayer InputLayers}. Most layers do return their activation.
 	 * @param input The activation of the preceding layer.
+	 * @param isInference Whether the model is being activated for inference or testing.
 	 * @return This layer's activation.
 	 */
-	public abstract SimpleMatrix activation(SimpleMatrix input);
+	public abstract SimpleMatrix activation(SimpleMatrix input, boolean isInference);
 	
 	/**
 	 * Performs backpropagation on this layer.

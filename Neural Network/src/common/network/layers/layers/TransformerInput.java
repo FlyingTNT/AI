@@ -33,10 +33,10 @@ public class TransformerInput extends Layer {
 	}
 	
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
-		this.input.activation(input);
-		embedding.activation(null);
-		positionalEncoding.activation(null);
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		this.input.activation(input, isInference);
+		embedding.activation(null, isInference);
+		positionalEncoding.activation(null, isInference);
 		lastActivation = positionalEncoding.getLastActivation();
 		return lastActivation;
 	}

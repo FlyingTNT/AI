@@ -11,7 +11,7 @@ import common.network.layers.models.TransformerModel;
 
 public class TransMain {	
 	public static void main(String[] args) {		
-		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 12, 8, 8, 3, 6);
+		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 12, 9, 8, 3, 6);
 		SimpleMatrix[][] transformerData = new SimpleMatrix[64][2];
 		
 		int pos = 0;
@@ -50,7 +50,7 @@ public class TransMain {
 		
 		int count = 0;
 		
-		for(int i = 0; count < 5; i++)
+		for(int i = 0; i<100; i++)
 		{
 			cost = transformer.epoch(transformerData);
 			System.out.println("Epoch " + (i + 1) + ", Cost: " + format.format(cost));

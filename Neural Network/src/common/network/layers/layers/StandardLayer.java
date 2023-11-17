@@ -41,15 +41,9 @@ public class StandardLayer extends Layer{
 	}
 
 	@Override
-	public SimpleMatrix activation(SimpleMatrix input) {
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
 		masks = lastLayer.getMasks();
 		input = lastLayer.getLastActivation().copy();//Input x depth
-		
-		/*
-		if(masks.length == inputs)
-			for(int i = 0; i < masks.length; i++)
-				if(masks[i])
-					input.setRow(i, new SimpleMatrix(1, depth));//*/
 		
 		weightedInputs = new SimpleMatrix(outputs, depth);
 		
