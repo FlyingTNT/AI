@@ -11,15 +11,15 @@ import common.network.layers.models.LayersModel;
 public class StandardLayer extends Layer{
 
 	Activation activation;
-	SimpleMatrix[] weights;//[depth]xOutxIn
-	SimpleMatrix biases;//Out x Depth
+	double[][][] weights;
+	double[][] biases;
 	
 	private SimpleMatrix weightedInputs;
 	
 	public StandardLayer(int inputs, int outputs, Activation activation) {
 		super(inputs, outputs);
-		biases = new SimpleMatrix(outputs, depth);
-		weights = new SimpleMatrix[depth];
+		biases = new double[outputs][depth];
+		weights = new double[outputs][depth][inputs];
 		this.activation = activation;
 		initHe();
 	}
@@ -27,61 +27,37 @@ public class StandardLayer extends Layer{
 	public StandardLayer(Layer inputLayer, int outputs, Activation activation) {
 		super(inputLayer, outputs);
 		depth = inputLayer.depth;
-		biases = new SimpleMatrix(outputs, depth);
-		weights = new SimpleMatrix[depth];
+		biases = new double[outputs][depth];
+		weights = new double[outputs][depth][inputs];
 		this.activation = activation;
 		initHe();
 	}
 	
 	public void init()
 	{
-		biases = SimpleMatrix.random(outputs, depth);
-		for(int i = 0; i < depth; i++)
-			weights[i] = SimpleMatrix.random(outputs, inputs);
-	}
-
-	@Override
-	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
-		masks = lastLayer.getMasks();
-		input = lastLayer.getLastActivation().copy();//Input x depth
-		
-		weightedInputs = new SimpleMatrix(outputs, depth);
-		
-		for(int i = 0; i < depth; i++)
-			weightedInputs.setColumn(i, weights[i].mult(input.getColumn(i)));
-		
-		weightedInputs = weightedInputs.plus(biases);
-			
-		lastActivation = activation.activation(weightedInputs);
-		return lastActivation;
+		biases = SimpleMatrix.random(outputs, depth).toArray2();
+		for(int i = 0; i < outputs; i++)
+			weights[i] = SimpleMatrix.random(depth, inputs).toArray2();
 	}
 	
-	public void backprop1()
-	{
-		SimpleMatrix nextErrorWeighted = getGradient();
-		clearGradients();
-		
-		SimpleMatrix error = activation.error(weightedInputs, nextErrorWeighted).scale(model.getLearningRate());
-		
-		//error: output x depth
-		//lastLayer.lastActivation: input x depth
-		//weights: [depth] x outputs x inputs
-		
-		SimpleMatrix thisErrorWeighted = new SimpleMatrix(inputs, depth);
-		
-		for(int i = 0; i < depth; i++)
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		masks = lastLayer.getMasks();
+		double[][] in = lastLayer.getLastActivation().toArray2();
+		double[][] weightedInputs = new double[outputs][depth];
+		for(int o = 0; o < outputs; o++)
 		{
-			thisErrorWeighted.setColumn(i, weights[i].transpose().mult(error.getColumn(i)));
-			weights[i] = weights[i].minus(error.getColumn(i).mult(lastLayer.getLastActivation().getColumn(i).transpose()));
+			for(int d = 0; d < depth; d++)
+			{
+				weightedInputs[o][d] = biases[o][d];
+				for(int i = 0; i < inputs; i++)
+				{
+					weightedInputs[o][d] += weights[o][d][i] * in[i][d];
+				}
+			}
 		}
-		
-		biases = biases.minus(error);
-		
-		double norm = thisErrorWeighted.normF();
-		if(norm > 1)
-			thisErrorWeighted = thisErrorWeighted.scale(1/norm);
-		
-		lastLayer.reportGradient(thisErrorWeighted);
+		this.weightedInputs = new SimpleMatrix(weightedInputs);
+		lastActivation = activation.activation(this.weightedInputs);
+		return lastActivation;
 	}
 	
 	@Override
@@ -90,25 +66,24 @@ public class StandardLayer extends Layer{
 		SimpleMatrix nextErrorWeighted = getGradient();
 		clearGradients();
 		
-		SimpleMatrix error1 = activation.error(weightedInputs, nextErrorWeighted);
-		SimpleMatrix error = error1.scale(model.getLearningRate());
-		//System.out.println(LayersMain.arrayToString(error));
-		SimpleMatrix thisErrorWeighted = new SimpleMatrix(inputs, depth);
+		double[][] error = activation.error(weightedInputs, nextErrorWeighted).toArray2();
+
+		double[][] thisErrorWeighted = new double[inputs][depth];
 		for(int d = 0; d < depth; d++)
 		{
-			for(int i = 0; i < outputs; i++)
+			for(int o = 0; o < outputs; o++)
 			{
-				for(int j = 0; j < inputs; j++)
+				double thisError = error[o][d] * model.getLearningRate();
+				biases[o][d] -= thisError;
+				for(int i = 0; i < inputs; i++)
 				{
-					thisErrorWeighted.set(j, d, thisErrorWeighted.get(j, d) + weights[d].get(i, j) * error1.get(i, d));
-					weights[d].set(i, j, weights[d].get(i, j) - lastLayer.getLastActivation().get(j, d) * error.get(i, d));
+					thisErrorWeighted[i][d] += weights[o][d][i] * error[o][d];
+					weights[o][d][i] -= lastLayer.getLastActivation().get(i, d) * thisError;
 				}
 			}
 		}
 		
-		biases.minus(error);
-		
-		lastLayer.reportGradient(thisErrorWeighted);
+		lastLayer.reportGradient(new SimpleMatrix(thisErrorWeighted));
 	}
 	
 	@Override
@@ -133,14 +108,12 @@ public class StandardLayer extends Layer{
         Random random = new Random();
         double mean = 0f;
 
-        	for(int j = 0; j < depth; j++)
-        	{
-        		weights[j] = new SimpleMatrix(outputs, inputs); 
-        		for(int i = 0; i < outputs; i++)
-        		for(int k = 0; k < inputs; k++)
-        			weights[j].set(i, k, (mean + desiredStdDev * random.nextGaussian()));
-        	}
-        		
+        weights = new double[outputs][depth][inputs];
+        
+    	for(int j = 0; j < outputs; j++)
+    		for(int i = 0; i < depth; i++)
+    			for(int k = 0; k < inputs; k++)
+    				weights[j][i][k] = mean + desiredStdDev * random.nextGaussian();	
 	}
 	
 	@Override
@@ -149,6 +122,14 @@ public class StandardLayer extends Layer{
 	}
 	
 	@Override
+	public String stringify() {
+		// TODO Auto-generated method stub
+		return "";
+	}
+	
+	public static StandardLayer load(String e, LayersModel f, int g) {return null;}
+	
+	/*@Override
 	public String stringify()
 	{
 		String out = getId() + " " + lastLayer.getId() + " " + inputs  + " " + outputs + " " + depth + " " + activation.name() +"\n";
@@ -167,8 +148,8 @@ public class StandardLayer extends Layer{
 		return out;
 	}
 
-	public static StandardLayer load(String string, LayersModel model, int position) {
-		StandardLayer out;
+	public static StandardLayer2 load(String string, LayersModel model, int position) {
+		StandardLayer2 out;
 
 		Scanner scanner = new Scanner(string);
 		int id = scanner.nextInt();
@@ -178,7 +159,7 @@ public class StandardLayer extends Layer{
 		int depth = scanner.nextInt();
 		String activation = scanner.next();
 		Activation activation2 = getActivation(activation);
-		out = new StandardLayer(model.getLayerByID(lastID), outputs, activation2);
+		out = new StandardLayer2(model.getLayerByID(lastID), outputs, activation2);
 		SimpleMatrix biases = new SimpleMatrix(outputs, depth);
 		SimpleMatrix[] weights = new SimpleMatrix[depth];
 		
@@ -194,15 +175,15 @@ public class StandardLayer extends Layer{
 				}
 			}
 		}
-		out.biases = biases;
-		out.weights = weights;
+		out.biases = biases.toArray2();
+		out.weights = weights.;
 		
 		scanner.close();
 		
 		out.setId(id);
 		
 		return out;
-	}
+	}*/
 	
 	static Activation getActivation(String name)
 	{
