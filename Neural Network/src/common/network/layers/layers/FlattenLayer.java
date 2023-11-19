@@ -6,6 +6,15 @@ import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.models.LayersModel;
 
+/**
+ * A layer that flattens the last layer's outputs to a n x 1 matrix, where n is the last layer's output
+ * count * its depth.
+ * <br><br>
+ * Note: This layer hasn't been tested since moving to EJML, so there is a real chance that it doesn't 
+ * work correctly, because I don't know how the {@link SimpleMatrix#reshape(int, int)} method works exactly.
+ * If the way it works in consistent with common reshaping convention, this should work perfectly.
+ * @author C. Cooper
+ */
 public class FlattenLayer extends Layer {
 
 	public FlattenLayer(Layer last) {
@@ -17,7 +26,7 @@ public class FlattenLayer extends Layer {
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
 		lastActivation = lastLayer.getLastActivation().copy();
-		lastActivation.reshape(outputs, 1);
+		lastActivation.reshape(outputs, 1);//Flattens the activation
 		return lastActivation;
 	}
 
@@ -26,7 +35,7 @@ public class FlattenLayer extends Layer {
 		SimpleMatrix nextErrorWeighted = getGradient();	
 		clearGradients();
 		
-		nextErrorWeighted.reshape(inputs, depth);
+		nextErrorWeighted.reshape(inputs, depth);//Unflattens the gradient (this is the part that might not work)
 		lastLayer.reportGradient(nextErrorWeighted);
 	}
 

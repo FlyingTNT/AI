@@ -4,6 +4,10 @@ import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.models.TransformerModel;
 
+/**
+ * Main class for the actual dataset.
+ * @author C. Cooper
+ */
 public class TransMain3 {
 	static int SEQUENCE_LENGTH = 530;
 	static int EMBED_DEPTH = 12;

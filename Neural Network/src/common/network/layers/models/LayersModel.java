@@ -179,8 +179,8 @@ public class LayersModel {
 		{
 			String type = scanner.next();//Gets its type
 			String load = scanner.next();//Gets its data
-			System.out.println(type);//Prints the type
-			System.out.println(load);//Prints the data
+			//System.out.println(type);//Prints the type
+			//System.out.println(load);//Prints the data
 			Layer layer;//Variable that will store the layer
 			switch(type)//Calls the relevant load function based on the type.
 			{

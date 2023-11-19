@@ -13,7 +13,7 @@ import common.network.layers.models.LayersModel;
  */
 public class PositionalEncoding extends Layer{
 
-	SimpleMatrix matrix;//The positional encoding matrix
+	private final SimpleMatrix matrix;//The positional encoding matrix
 	
 	/**
 	 * Creates a PositionalEncoding layer that applies the encoding to the given {@link EmbeddingLayer}
@@ -49,6 +49,8 @@ public class PositionalEncoding extends Layer{
 	public String className() {
 		return "PositionalEncoding";
 	}
+	
+	//I'm not documenting the generation functions because I'm not convinced that any of them work. Imo the best is 2, but Breck told me to use the one I'm currently using.
 	
 	public static double[][] generatePositionalEncoding2(int sequenceLength, int embeddingDepth) {
         double[][] positionalEncoding = new double[sequenceLength][embeddingDepth];

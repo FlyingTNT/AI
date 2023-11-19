@@ -9,11 +9,24 @@ import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.models.TransformerModel;
 
+/**
+ * Main class that tests a transformer model on the dataset:<br>
+ * 1 1 1 1 1 1 1 1 -> 1 1 1 1 1 1 1 1<br>
+ * 1 2 1 2 1 2 1 2 -> 2 1 2 1 2 1 2 1<br>
+ * 1 3 1 3 1 3 1 3 -> 3 1 3 1 3 1 3 1<br>
+ * ....<br>
+ * 8 7 8 7 8 7 8 7 -> 7 8 7 8 7 8 7 8<br>
+ * 8 8 8 8 8 8 8 8 -> 8 8 8 8 8 8 8 8
+ * @author C. Cooper
+ */
 public class TransMain {	
-	public static void main(String[] args) {		
+	public static void main(String[] args) {	
 		TransformerModel transformer = new TransformerModel(0.005f, 8, 8, 12, 9, 8, 3, 6);
 		SimpleMatrix[][] transformerData = new SimpleMatrix[64][2];
 		
+		/*
+		 * Generating dataset
+		 */
 		int pos = 0;
 		for(int i = 0; i < 8; i++)
 		{
@@ -42,15 +55,18 @@ public class TransMain {
 		
 		System.out.println(transformer);
 		
-		//transformer.test(transformerData);
-		
 		DecimalFormat format = new DecimalFormat("0.000");
 		
 		float cost = 100;
 		
 		int count = 0;
 		
-		for(int i = 0; i<100; i++)
+		/*
+		 * Runs epochs until the cost has been less than 1 for 5 epochs in a row.
+		 * I found that this produced the best results. If you go for like 10 in a row,
+		 * the model gets worse.
+		 */
+		for(int i = 0; count < 5; i++)
 		{
 			cost = transformer.epoch(transformerData);
 			System.out.println("Epoch " + (i + 1) + ", Cost: " + format.format(cost));
@@ -62,6 +78,9 @@ public class TransMain {
 		
 		System.out.println("=======================================");
 		
+		/*
+		 * For each point in the dataset, prints out input -> actualInferenceOutput ~ target
+		 */
 		for(int i = 0; i < 64; i++)
 		{
 			SimpleMatrix result = transformer.beamSearch(transformerData[i][0], 10);
@@ -74,6 +93,9 @@ public class TransMain {
 		
 		//transformer.test(transformerData);
 		
+		/*
+		 * Store the model so it can be reloaded in LoadMain
+		 */
 		File out = new File("C:\\AIClub\\Test\\model.txt");
 		try {
 			FileWriter writer = new FileWriter(out);

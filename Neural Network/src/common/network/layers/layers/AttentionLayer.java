@@ -174,8 +174,8 @@ public class AttentionLayer extends Layer {
 			SimpleMatrix nextErrorData = nextErrorWeighted.cols(i*headDataSize, i*headDataSize+headDataSize);
 			
 			/*
-			 * Pulls the error through the matrix multiplication softmax(...) * Value
-			 * error[0] = the error of the softmax
+			 * Pulls the error through the matrix multiplication softmax(Q*(K^T)) * Value
+			 * error[0] = the error of softmax(Q*(K^T))
 			 * error[1] = the error of Value
 			 */
 			SimpleMatrix[] error = errorMatrixMult(lastSoftOut[i], valueData, nextErrorData);

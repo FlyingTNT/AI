@@ -11,8 +11,8 @@ import common.network.math.NetworkMath;
  * @author C. Cooper
  */
 public abstract class Layer {
-	public final int inputs;//The number of inputs
-	public final int outputs;//The number of outputs
+	public final int inputs;//The number of inputs to the layer
+	public final int outputs;//The number of outputs of the layer
 	int depth = 1;//The second dimension of the inputs/outputs
 	Layer lastLayer;//The layer that precedes this one
 	protected SimpleMatrix lastActivation;//This layer's last activation. Used for forward propagation and sometimes for backpropagation

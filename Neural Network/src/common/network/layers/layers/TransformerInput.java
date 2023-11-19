@@ -6,22 +6,40 @@ import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.models.LayersModel;
 
+/**
+ * A layer representing the input stack to the Encoder/Decoder of a Transformer. Consists of an {@link InputLayer},
+ * an {@link EmbeddingLayer}, and a {@link PositionalEncoding} layer.
+ * @author C. Cooper
+ */
 public class TransformerInput extends Layer {
 
-	InputLayer input;
-	EmbeddingLayer embedding;
-	PositionalEncoding positionalEncoding;
+	final InputLayer input;//The InputLayer
+	final EmbeddingLayer embedding;//The EmbeddingLayer
+	final PositionalEncoding positionalEncoding;//The PositionalEncoding layer.
 	
+	/**
+	 * Creates a TransformerInput whose input dimension is the given sequenceLength, whose embedding depth
+	 * is the given embeddingDepth, and whose encoder's vocab size is the given vocabSize.
+	 * @param sequenceLength The dimensions of the input to this layer.
+	 * @param embeddingDepth The size of the embedding vectors.
+	 * @param vocabSize The number of tokens in the vocab.
+	 */
 	public TransformerInput(int sequenceLength, int embeddingDepth, int vocabSize)
 	{
-		super(sequenceLength, sequenceLength);
-		depth = embeddingDepth;
+		super(sequenceLength, sequenceLength);//Super constructor w/ inputs = outputs = sequenceLength
+		depth = embeddingDepth;//Sets this layer's depth to the embed depth.
 		
-		input = new InputLayer(sequenceLength);
-		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, true);
-		positionalEncoding = new PositionalEncoding(embedding);
+		input = new InputLayer(sequenceLength);//Creates an InputLayer with size sequenceLength
+		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, true);//Creates an embed layer with the given embed depth and vocab size. 
+		positionalEncoding = new PositionalEncoding(embedding);//Adds positional encoding to the embed layer.
 	}
 	
+	/**
+	 * More low-level constructor used in the {@link #load(String, LayersModel, int)} function.
+	 * @param inputLayer This layer's internal InputLayer
+	 * @param embedding This layer's internal EmbeddingLayer
+	 * @param positionalEncoding This layer's internal PositionalEncoding layer.
+	 */
 	private TransformerInput(InputLayer inputLayer, EmbeddingLayer embedding, PositionalEncoding positionalEncoding)
 	{
 		super(embedding.inputs, embedding.inputs);
@@ -32,19 +50,26 @@ public class TransformerInput extends Layer {
 		this.positionalEncoding = positionalEncoding;
 	}
 	
+	/**
+	 * Takes the activation of this layer. Unlike most layers, the input param is actually used because this layer
+	 * has no preceding layer.
+	 * @param input The input to this layer.
+	 * @param isInference Whether this activation is for inference (no effect).
+	 * @return The activation of this layer.
+	 */
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
-		this.input.activation(input, isInference);
-		embedding.activation(null, isInference);
-		positionalEncoding.activation(null, isInference);
-		lastActivation = positionalEncoding.getLastActivation();
+		this.input.activation(input, isInference);//Activates the input layer with the given input
+		embedding.activation(null, isInference);//Activates the embedding layer
+		lastActivation = positionalEncoding.activation(null, isInference);//Activates the positional encoding layer
 		return lastActivation;
 	}
 
 	@Override
 	public void backprop() {
-		embedding.backprop();
-		input.clearGradients();
+		//Unlike most layers, this layer doesn't use getGradient() because it just passes gradients sent to it directly to the 
+		
+		embedding.backprop();//Just backprops the embed layer (the other two don't learn).
 	}
 
 	@Override

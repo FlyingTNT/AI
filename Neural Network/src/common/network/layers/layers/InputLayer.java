@@ -23,12 +23,19 @@ public class InputLayer extends Layer{
 	}
 
 	@Override
-	public void backprop() {}
+	public void backprop() {return;}
 	
 	@Override
 	public String name() {
 		return "Input";
 	}
+	
+	/**
+	 * Does nothing because this layer doesn't learn.
+	 * @param gradient The gradient to do nothing with.
+	 */
+	@Override
+	public void reportGradient(SimpleMatrix gradient) {return;}
 	
 	@Override
 	public String stringify() {

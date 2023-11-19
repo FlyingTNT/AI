@@ -38,7 +38,7 @@ public interface Cost {
 		
 		@Override
 		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
-				double x = prediction.minus(target).normF();
+				double x = prediction.minus(target).normF();//Magnitude of prediction - target
 				return x*x/2;
 		}
 	};
@@ -72,7 +72,7 @@ public interface Cost {
 	 * ex: Target is just 3 instead of {0, 0, 0, 1, 0}
 	 */
 	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY = new Cost() {
-		@Override//This seems wrong but I derived it myself and it is right.
+		@Override
 		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
 				return prediction.elementOp(new ElementOpReal() {
 				
@@ -82,7 +82,7 @@ public interface Cost {
 					if(index == -1)
 						return 0;
 					double out = (value - ((index == col) ? 1 : 0)) / (value * (1-value));
-					return out > 5 ? 5 : out < -5 ? -5 : out;
+					return out > 5 ? 5 : out < -5 ? -5 : out;//Clips the gradients if they're over 5 in magnitude
 					//return -((index == col) ? 1 : 0)/value;
 				}
 			});
@@ -107,7 +107,7 @@ public interface Cost {
 	 * and this is made for {@link Activation#SOFTMAX normal softmax}).
 	 */
 	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY_WIDTHWISE = new Cost() {
-		@Override//This seems wrong but I derived it myself and it is right.
+		@Override
 		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
 				return prediction.elementOp(new ElementOpReal() {
 				
