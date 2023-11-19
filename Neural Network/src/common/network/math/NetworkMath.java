@@ -1,9 +1,13 @@
 package common.network.math;
+<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.Iterator;
 
 //import common.network.NetworkMatricies;
 //import common.network.TrainingSet;
+=======
+import org.ejml.simple.SimpleMatrix;
+>>>>>>> refs/remotes/origin/ejml
 
 public class NetworkMath 
 {
@@ -155,6 +159,14 @@ public class NetworkMath
 		return (float) Math.sqrt(dot(a, a));
 	}
 	
+	public static SimpleMatrix normalize(SimpleMatrix gradient, double max)
+	{
+		double l2 = gradient.normF();
+		if(l2 > max)
+			return gradient.scale(max/l2);
+		return gradient;
+	}
+	
 	/**
 	 * a-b
 	 * @return a-b
@@ -183,7 +195,7 @@ public class NetworkMath
 		return output;
 	}
 	
-	public static float[][] scale(float[][] a, float c)
+	public static double[][] scale(double[][] a, double c)
 	{
 		for(int i = 0; i < a.length; i++)
 		{
@@ -195,9 +207,9 @@ public class NetworkMath
 		return a;
 	}	
 	
-	public static float[][] multiplyAB(float[][] a, float[][] b)
+	public static double[][] multiplyAB(double[][] a, double[][] b)
 	{
-		float[][] output = new float[a.length][b[0].length];
+		double[][] output = new double[a.length][b[0].length];
 		if(a[0].length != b.length)
 		{
 			throw new IllegalArgumentException("The matrixes are the wrong size, dumbass");
@@ -216,9 +228,9 @@ public class NetworkMath
 		return output;
 	}
 	
-	public static float[][] multiplyABT(float[][] a, float[][] b)
+	public static double[][] multiplyABT(double[][] a, double[][] b)
 	{
-		float[][] output = new float[a.length][b.length];
+		double[][] output = new double[a.length][b.length];
 		if(a[0].length != b[0].length)
 		{
 			throw new IllegalArgumentException("The matrixes are the wrong size, dumbass");
@@ -363,22 +375,23 @@ public class NetworkMath
 		}
 		return output;
 	}
+<<<<<<< HEAD
 	/*
 	public static enum costFunction
-	{
-		QUADRIATC, CROSS_ENTROPY
-	}
+=======
 	
-	public static class quadraticCost
+	public static int argmax(SimpleMatrix matrix)
+>>>>>>> refs/remotes/origin/ejml
 	{
-		public static float cost(NetworkMatricies network, TrainingSet set)
-		{
-			float output = 0;
-			
-			for(float[][] ioPair : set.set())
+		int index = -1;
+		double max = Double.NEGATIVE_INFINITY;
+		for(int i = 0; i < matrix.getNumCols(); i++)
+			if(matrix.get(i) > max)
 			{
-				output += dot(subtract(network.output(ioPair[0]), ioPair[1]));
+				max = matrix.get(i);
+				index = i;
 			}
+<<<<<<< HEAD
 			
 			return output / set.length();
 		}
@@ -527,4 +540,8 @@ public class NetworkMath
 		}
 
 	}*/
+=======
+		return index;
+	}
+>>>>>>> refs/remotes/origin/ejml
 }

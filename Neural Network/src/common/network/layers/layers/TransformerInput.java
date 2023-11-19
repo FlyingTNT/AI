@@ -1,40 +1,93 @@
 package common.network.layers.layers;
 
-import common.network.layers.models.LayersNetwork;
+import java.util.Scanner;
 
+import org.ejml.simple.SimpleMatrix;
+
+import common.network.layers.models.LayersModel;
+
+/**
+ * A layer representing the input stack to the Encoder/Decoder of a Transformer. Consists of an {@link InputLayer},
+ * an {@link EmbeddingLayer}, and a {@link PositionalEncoding} layer.
+ * @author C. Cooper
+ */
 public class TransformerInput extends Layer {
 
-	InputLayer input;
-	EmbeddingLayer embedding;
-	PositionalEncoding positionalEncoding;
+	final InputLayer input;//The InputLayer
+	final EmbeddingLayer embedding;//The EmbeddingLayer
+	final PositionalEncoding positionalEncoding;//The PositionalEncoding layer.
 	
+	/**
+	 * Creates a TransformerInput whose input dimension is the given sequenceLength, whose embedding depth
+	 * is the given embeddingDepth, and whose encoder's vocab size is the given vocabSize.
+	 * @param sequenceLength The dimensions of the input to this layer.
+	 * @param embeddingDepth The size of the embedding vectors.
+	 * @param vocabSize The number of tokens in the vocab.
+	 */
 	public TransformerInput(int sequenceLength, int embeddingDepth, int vocabSize)
 	{
-		super(sequenceLength, sequenceLength);
-		depth = embeddingDepth;
+		super(sequenceLength, sequenceLength);//Super constructor w/ inputs = outputs = sequenceLength
+		depth = embeddingDepth;//Sets this layer's depth to the embed depth.
 		
-		input = new InputLayer(sequenceLength);
-		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, false);
-		positionalEncoding = new PositionalEncoding(embedding);
+		input = new InputLayer(sequenceLength);//Creates an InputLayer with size sequenceLength
+		embedding = new EmbeddingLayer(input, embeddingDepth, vocabSize, true);//Creates an embed layer with the given embed depth and vocab size. 
+		positionalEncoding = new PositionalEncoding(embedding);//Adds positional encoding to the embed layer.
 	}
 	
+	/**
+	 * More low-level constructor used in the {@link #load(String, LayersModel, int)} function.
+	 * @param inputLayer This layer's internal InputLayer
+	 * @param embedding This layer's internal EmbeddingLayer
+	 * @param positionalEncoding This layer's internal PositionalEncoding layer.
+	 */
+	private TransformerInput(InputLayer inputLayer, EmbeddingLayer embedding, PositionalEncoding positionalEncoding)
+	{
+		super(embedding.inputs, embedding.inputs);
+		depth = embedding.depth;
+		
+		this.input = inputLayer;
+		this.embedding = embedding;
+		this.positionalEncoding = positionalEncoding;
+	}
+	
+	/**
+	 * Takes the activation of this layer. Unlike most layers, the input param is actually used because this layer
+	 * has no preceding layer.
+	 * @param input The input to this layer.
+	 * @param isInference Whether this activation is for inference (no effect).
+	 * @return The activation of this layer.
+	 */
 	@Override
+<<<<<<< HEAD
 	public float[][] activation(float[][] input) {
 		this.input.activation(input);
 		embedding.activation(null);
 		positionalEncoding.activation(input);
 		return positionalEncoding.getLastActivation();
+=======
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		this.input.activation(input, isInference);//Activates the input layer with the given input
+		embedding.activation(null, isInference);//Activates the embedding layer
+		lastActivation = positionalEncoding.activation(null, isInference);//Activates the positional encoding layer
+		return lastActivation;
+>>>>>>> refs/remotes/origin/ejml
 	}
 
 	@Override
 	public void backprop() {
-		embedding.backprop();
-		input.clearGradients();
+		//Unlike most layers, this layer doesn't use getGradient() because it just passes gradients sent to it directly to the 
+		
+		embedding.backprop();//Just backprops the embed layer (the other two don't learn).
 	}
 
 	@Override
 	public String name() {
 		return "Transformer Input";
+	}
+	
+	@Override
+	public String className() {
+		return "TransformerInput";
 	}
 
 	public void setMasking(boolean masking)
@@ -43,20 +96,55 @@ public class TransformerInput extends Layer {
 	}
 	
 	@Override
-	public void reportGradient(float[][] gradient) {
+	public void reportGradient(SimpleMatrix gradient) {
 		embedding.reportGradient(gradient);
 	}
 	
 	@Override
-	public float[][] getLastActivation() {
+	public SimpleMatrix getLastActivation() {
 		return positionalEncoding.getLastActivation();
 	}
 	
 	@Override
-	public void setModel(LayersNetwork model) {
+	public void setModel(LayersModel model) {
 		super.setModel(model);
 		input.setModel(model);
 		embedding.setModel(model);
 		positionalEncoding.setModel(model);
+	}
+	
+	@Override
+	public boolean[] getMasks() {
+		return positionalEncoding.getMasks();
+	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + input.getId() + " " + positionalEncoding.getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
+	}
+	
+	public static TransformerInput load(String string, LayersModel model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int inputId = scanner.nextInt();
+		int positionalId = scanner.nextInt();
+		int inputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		int vocabSize = scanner.nextInt();
+		StringBuilder builder = new StringBuilder();
+		while(scanner.hasNextLine())
+			builder.append(scanner.nextLine() + "\n");
+		scanner.close();
+		InputLayer inputLayer = new InputLayer(inputs);
+		inputLayer.setId(inputId);
+		inputLayer.setModel(model);
+		EmbeddingLayer embedding = EmbeddingLayer.load(builder.toString(), model, -1);
+		embedding.setModel(model);
+		PositionalEncoding encoding = new PositionalEncoding(embedding);
+		encoding.setId(positionalId);
+		encoding.setModel(model);
+		TransformerInput out = new TransformerInput(inputLayer, embedding, encoding);
+		out.setId(id);
+		return out;
 	}
 }

@@ -1,80 +1,60 @@
 package common.network.layers.layers;
 
-import common.network.layers.LayersMain;
+import java.util.Scanner;
 
+import org.ejml.simple.SimpleMatrix;
+
+import common.network.layers.models.LayersModel;
+
+/**
+ * A layer that takes the norm over the entire input. That is, modifies the input so that
+ * its mean is 0 and its variance is 1.
+ * @author C. Cooper
+ */
 public class NormLayer extends Layer{
 
 	//https://www.pinecone.io/learn/batch-layer-normalization/
 	//https://neuralthreads.medium.com/layer-normalization-and-how-to-compute-its-jacobian-for-backpropagation-55a549d5936f
 	
-	private float lastStdev;
-	private float lastDeltas[][];
-	private final int count;
+	private double lastStdev;//The stdev of the last activation
+	private SimpleMatrix lastDeltas;//A matrix of (input - average) from the inputs of the last activation
+	private final int count;//The total number of inputs to this layer = inputs * depth.
 	
 	public NormLayer(Layer last) 
 	{
 		super(last, last.outputs);
 		
-		lastActivation = new float[outputs][depth];
-		lastDeltas = new float[outputs][depth];
+		lastActivation = new SimpleMatrix(new float[outputs][depth]);
+		lastDeltas = new SimpleMatrix(new float[outputs][depth]);
 		count = outputs*depth;
 	}
 
 	@Override
-	public float[][] activation(float[][] activations)
+	public SimpleMatrix activation(SimpleMatrix activations, boolean isInference)
 	{
-		activations = lastLayer.getLastActivation();
+		masks = lastLayer.getMasks();//This layer doesn't do masking, but pulls the masks forward in case the next layer does.
+		activations = lastLayer.getLastActivation();//The last layer's activation
 		
-		float average = 0;
-		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				if(Float.isNaN(activations[i][j]))
-				{
-					LayersMain.print(activations);
-					System.out.println(activations.length);
-					throw new IllegalArgumentException();
-				}
-				average += activations[i][j];
-			}
-		}
+		double average = activations.elementSum();
 		average /= count;
-		if(Float.isNaN(average))
+		
+		if(Double.isNaN(average))//This gets hit whenever *something* is wrong with the model.
 		{
 			throw new IllegalArgumentException();
 		}
 		
-		float stdevSquared = 0;
+		lastDeltas = activations.minus(average);//Subtracts the average from each element in activations and stores it in lastDeltas
 		
-		for(int i = 0; i < outputs; i++)
-		{
-			if(masks[i][0])
-			{
-				continue;
-			}
-			for(int j = 0; j < depth; j++)
-			{
-				lastDeltas[i][j] = activations[i][j] - average;
-				stdevSquared += lastDeltas[i][j]*lastDeltas[i][j];
-			}
-		}
-		
-		stdevSquared /= count;
-		lastStdev = (float)Math.sqrt(stdevSquared);
-		if(Float.isNaN(stdevSquared))
+		//Stdev = sqrt(sum((input - average for each input)^2)  / numberOfInputs)
+		//      = sqrt(sum((input - average for each input)^2)) / sqrt(numberOfInputs)
+		//      = lastDeltas.normF()                            / sqrt(count)
+		lastStdev = lastDeltas.normF() / Math.sqrt(count);//Normf is the 'length' of the matrix. 
+		if(Double.isNaN(lastStdev))
 		{
 			throw new IllegalArgumentException();
 		}
 		
-		for(int i = 0; i < outputs; i++)
-		{
-			for(int j = 0; j < depth; j++)
-			{
-				lastActivation[i][j] = lastDeltas[i][j] / lastStdev;
-			}
-		}
+		lastActivation = lastDeltas.divide(lastStdev);//Divides each item in lastDeltas by the stdev (produces matrix w/ mean 0 and variance 1)
 		
 		return lastActivation;
 	}
@@ -83,19 +63,39 @@ public class NormLayer extends Layer{
 	public void backprop() {
 		//See Jacobian section at following link:
 		//https://neuralthreads.medium.com/layer-normalization-and-how-to-compute-its-jacobian-for-backpropagation-55a549d5936f
-		float[][] nextErrorWeighted = getGradient();
+		//Just look at the link I'm not explaining this
+		SimpleMatrix nextErrorWeighted = getGradient();
 		clearGradients();
 		
 		if(lastStdev == 0)
 		{
 			throw new IllegalArgumentException();
 		}
-		float stdevCubed = lastStdev * lastStdev * lastStdev;
-		float negativeOneOverNStdevCubed = -1/(count * stdevCubed);
-		float nMinusOneOverNStdev = (count - 1) / (count * lastStdev);
-		float negativeOneOverNStdev = -1 / (count * lastStdev);
+		double stdevCubed = lastStdev * lastStdev * lastStdev;
+		double negativeOneOverNStdevCubed = -1/(count * stdevCubed);
+		double nMinusOneOverNStdev = (count - 1) / (count * lastStdev);
+		double negativeOneOverNStdev = -1 / (count * lastStdev);
+		double oneOverStdev = 1/lastStdev;
 		
-		if(Float.isNaN(stdevCubed))
+		//*
+		SimpleMatrix base = lastDeltas.scale(negativeOneOverNStdevCubed);
+		base = base.elementMult(nextErrorWeighted);
+		
+		double sum = base.elementSum();
+		double sum2 = nextErrorWeighted.scale(negativeOneOverNStdev).elementSum();
+		
+		SimpleMatrix mod = nextErrorWeighted.scale(oneOverStdev);
+		
+		SimpleMatrix out = lastDeltas.scale(sum);
+		out = out.plus(sum2);
+		out = out.plus(mod);
+		
+		lastLayer.reportGradient(out);
+		
+		//*/This is a naive calculation of the gradient that takes O(n^4) (the one above takes O(n^2))
+		
+		/*
+		if(Double.isNaN(stdevCubed))
 		{
 			throw new IllegalArgumentException();
 		}
@@ -106,8 +106,8 @@ public class NormLayer extends Layer{
 		{
 			for(int j = 0; j < depth; j++)
 			{
-				float deltaTimesNegativeOneOverNStdevCubed = lastDeltas[i][j] * negativeOneOverNStdevCubed;
-				if(Float.isNaN(nextErrorWeighted[i][j]))
+				double deltaTimesNegativeOneOverNStdevCubed = lastDeltas.get(i, j) * negativeOneOverNStdevCubed;
+				if(Double.isNaN(nextErrorWeighted.get(i, j)))
 				{
 					throw new IllegalArgumentException();
 				}
@@ -115,23 +115,49 @@ public class NormLayer extends Layer{
 				{
 					for(int l = j; l < depth; l++)
 					{
-						float derivativeOfijWithRespectTokl = deltaTimesNegativeOneOverNStdevCubed * lastDeltas[k][l] + ((i == k && j == l) ? nMinusOneOverNStdev : negativeOneOverNStdev);
-						thisError[i][j] += derivativeOfijWithRespectTokl * nextErrorWeighted[k][l];
+						double derivativeOfijWithRespectTokl = deltaTimesNegativeOneOverNStdevCubed * lastDeltas.get(k, l) + ((i == k && j == l) ? nMinusOneOverNStdev : negativeOneOverNStdev);
+						thisError[i][j] += derivativeOfijWithRespectTokl * nextErrorWeighted.get(k, l);
 						if(!(i == k && j == l))//dij/dkl == dkl/dij
 						{
-							thisError[k][l] += derivativeOfijWithRespectTokl * nextErrorWeighted[i][j];
+							thisError[k][l] += derivativeOfijWithRespectTokl * nextErrorWeighted.get(i, j);
 						}
 					}
 				}
 			}
 		}
 		
-		lastLayer.reportGradient(thisError);
+		lastLayer.reportGradient(new SimpleMatrix(thisError));
+		*/
 	}
 
 
 	@Override
 	public String name() {
 		return "Norm";
+	}
+	
+	@Override
+	public String stringify() {
+		return getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + outputs;
+	}
+	
+	/**
+	 * Creates a NormLayer from a String produced by this class's {@link #stringify()} method.
+	 * <br><br>
+	 * Only the first two numbers (thisId and lastLayerId) in the string are actually used.
+	 * @param string A string produced by {@link #stringify()}
+	 * @param model The model this layer belongs to.
+	 * @param pos The position of this layer in the model (not used)
+	 * @return A NormLayer based on the given string.
+	 */
+	public static NormLayer load(String string, LayersModel model, int pos) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastId = scanner.nextInt();
+		scanner.close();
+		Layer lastLayer = model.getLayerByID(lastId);
+		NormLayer out = new NormLayer(lastLayer);
+		out.setId(id);
+		return out;
 	}
 }

@@ -63,6 +63,7 @@ public class DatasetLoader {
 					for(int j = 0; j < sequenceLength; j++)
 						out[problemNumber][j] = scanner.nextInt();
 				}
+				scanner.close();
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

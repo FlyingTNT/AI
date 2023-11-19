@@ -1,83 +1,136 @@
 package common.network.layers;
 
-import common.network.math.NetworkMath;
+import org.ejml.simple.SimpleMatrix;
+import org.ejml.simple.SimpleOperations.ElementOpReal;
 
+/**
+ * An interface that represents a cost (or loss) function of a machine learning model.
+ * I know cost and loss don't mean the same thing and this should really be called Loss. I don't care.
+ * @author C. Cooper
+ */
 public interface Cost {
-	float cost(float[][] prediction, float[][] target);
-	float[][] derivative(float[][] prediction, float[][] target);
+	/**
+	 * Calculates the loss for a given prediction and target.
+	 * @param prediction The prediction.
+	 * @param target The target.
+	 * @return The loss of the prediction given the target.
+	 */
+	double cost(SimpleMatrix prediction, SimpleMatrix target);
 	
+	/**
+	 * Calculates the derivative of the loss function given a prediction and target.
+	 * @param prediction The prediction.
+	 * @param target The target.
+	 * @return The derivative of the loss function given a prediction and target.
+	 */
+	SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target);
+	
+	/**
+	 * Quadratic loss.<br>
+	 * Loss = sqrt(sum(prediction - target)^2) / 2
+	 */
 	public static Cost QUADRATIC = new Cost() {
 		
 		@Override
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			return NetworkMath.subtract(prediction, target);
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+			return prediction.minus(target);
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-				float x = NetworkMath.length(NetworkMath.subtract(target, prediction)[0]);
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+				double x = prediction.minus(target).normF();//Magnitude of prediction - target
 				return x*x/2;
 		}
 	};
 	
-	//VERIFIED
+	/**
+	 * Cross entropy loss.<br>
+	 * Loss = -sum(ln(prediction) * target)
+	 */
 	public static Cost CROSS_ENTROPY = new Cost() {
 		@Override
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			float[][] out = new float[prediction.length][prediction[0].length];
-			for(int i = 0; i < prediction.length; i++)
-			{
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					out[i][j] = (prediction[i][j] - target[i][j]) / (prediction[i][j] * (1 - prediction[i][j]));
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+			return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					return (value - target.get(row, col)) / (value * (1-value));
 				}
-			}
-			return out;
+			});
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-			float sum = 0;
-			for(int i = 0; i < prediction.length; i++)
-			{
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					sum += target[i][j] * Math.log(prediction[i][j]);
-				}
-			}
-			return -sum;
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			return -target.elementMult(prediction.elementLog()).elementSum();
 		}
 	};
 	
+	/**
+	 * {@link #CROSS_ENTROPY Cross Entropy} loss except the targets are given as the integer indexes of the targets, rather than the whole
+	 * one-hot encoding.
+	 * <br><br>
+	 * ex: Target is just 3 instead of {0, 0, 0, 1, 0}
+	 */
 	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY = new Cost() {
-		@Override//This seems wrong but I derived it myself and it is right.
-		public float[][] derivative(float[][] prediction, float[][] target) {
-			float[][] out = new float[prediction.length][prediction[0].length];
-			for(int i = 0; i < prediction.length; i++)
-			{
-				int goal = (int)target[i][0];
-				//System.out.println(LayersMain.floatMatrixToString(prediction, 1));
-				//System.out.println(goal);
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					out[i][j] = (prediction[i][j] - (j == goal ? 1 : 0)) / ( prediction[i][j] * (1 -  prediction[i][j]));
+		@Override
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+				return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					int index = (int)target.get(row, 0);
+					if(index == -1)
+						return 0;
+					double out = (value - ((index == col) ? 1 : 0)) / (value * (1-value));
+					return out > 5 ? 5 : out < -5 ? -5 : out;//Clips the gradients if they're over 5 in magnitude
+					//return -((index == col) ? 1 : 0)/value;
 				}
-			}
-			return out;
+			});
 		}
 		
 		@Override
-		public float cost(float[][] prediction, float[][] target) {
-			float sum = 0;
-			for(int i = 0; i < prediction.length; i++)
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			double sum = 0;
+			for(int i = 0; i < target.getNumRows(); i++)
 			{
-				int goal = (int)target[i][0];
-				for(int j = 0; j < prediction[0].length; j++)
-				{
-					sum += (j == goal ? 1 : 0) * Math.log(prediction[i][j]);
-				}
+				if((int)target.get(i, 0) == -1)
+					continue;
+				sum += -Math.log(prediction.get(i, (int)target.get(i, 0)));
 			}
-			return -sum;
+			return sum;
+		}
+	};
+	
+	/**
+	 * {@link #SPARSE_CATEGORICAL_CROSS_ENTROPY SparseCategoricalCrossEntropy} loss but along the outputSize axis, rather than the
+	 * depth axis. ({@link #SPARSE_CATEGORICAL_CROSS_ENTROPY SparseCategoricalCrossEntropy} is made for {@link Activation#SOFTMAX_DEPTHWISE depthwise softmax},
+	 * and this is made for {@link Activation#SOFTMAX normal softmax}).
+	 */
+	public static Cost SPARSE_CATEGORICAL_CROSS_ENTROPY_WIDTHWISE = new Cost() {
+		@Override
+		public SimpleMatrix derivative(SimpleMatrix prediction, SimpleMatrix target) {
+				return prediction.elementOp(new ElementOpReal() {
+				
+				@Override
+				public double op(int row, int col, double value) {
+					int index = (int)target.get(col, 0);
+					if(index == -1)
+						return 0;
+					return (value - ((index == row) ? 1 : 0)) / (value * (1-value));
+				}
+			});
+		}
+		
+		@Override
+		public double cost(SimpleMatrix prediction, SimpleMatrix target) {
+			double sum = 0;
+			for(int i = 0; i < target.getNumRows(); i++)
+			{
+				if((int)target.get(i, 0) == -1)
+					continue;
+				sum += -Math.log(prediction.get((int)target.get(i, 0), i));
+			}
+			return sum;
 		}
 	};
 }

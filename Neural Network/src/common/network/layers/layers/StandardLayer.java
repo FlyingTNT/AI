@@ -1,96 +1,116 @@
 package common.network.layers.layers;
 
 import java.util.Random;
+import java.util.Scanner;
+
+import org.ejml.simple.SimpleMatrix;
 
 import common.network.layers.Activation;
-import common.network.math.NetworkMath;
+import common.network.layers.models.LayersModel;
 
+/**
+ * A standard layer. (also called linear, dense, fully-connected, or feed forward). I'll probably
+ * rename this to LinearLayer in the future.
+ * @author C. Cooper
+ */
 public class StandardLayer extends Layer{
 
-	Activation activation;
-	float[][][] weights;
-	float[][] biases;
+	Activation activation;//The activation function to apply
+	double[][][] weights;//The array of weights [outputs][depth][inputs]
+	double[][] biases;//The array of biases [outputs][depth]
 	
-	private float[][] weightedInputs;
+	private SimpleMatrix weightedInputs;//The weighted inputs to the last activation. This is a SimpleMatrix b/c the activation functions take in SimpleMatricies
 	
-	public StandardLayer(int inputs, int outputs, Activation activation) {
-		super(inputs, outputs);
-		biases = new float[outputs][depth];
-		weights = new float[outputs][depth][inputs];
-		this.activation = activation;
-		initHe();
-	}
-	
+	/**
+	 * Basic constructor. Gets its input and depth dimensions from the last layer's output and depth dimensions.
+	 * @param inputLayer The layer this layer gets its inputs from.
+	 * @param outputs The number of outputs this layer has.
+	 * @param activation The activation function to apply to this layer.
+	 */
 	public StandardLayer(Layer inputLayer, int outputs, Activation activation) {
 		super(inputLayer, outputs);
 		depth = inputLayer.depth;
-		biases = new float[outputs][depth];
-		weights = new float[outputs][depth][inputs];
+		biases = new double[outputs][depth];
+		weights = new double[outputs][depth][inputs];
 		this.activation = activation;
-		initHe();
+		initHe();//Initializes the weights using He initialization. See the method doc for why.
 	}
 	
+	/**
+	 * Basic initialization function that just sets the weights and biases to random numbers 0-1
+	 */
 	public void init()
 	{
-		Random random = new Random();
-		for(int d = 0; d < depth; d++)
-		{
-			for(int i = 0; i < outputs; i++)
-			{
-				biases[i][d] = random.nextFloat();
-				if(biases[i][d] == 0)biases[i][d] = 1;
-				for(int j = 0; j <  inputs; j++)
-				{
-					weights[i][d][j] = random.nextFloat();
-					if(weights[i][d][j] == 0)weights[i][d][j] = 1;
-				}
-			}
-		}
+		biases = SimpleMatrix.random(outputs, depth).toArray2();
+		for(int i = 0; i < outputs; i++)
+			weights[i] = SimpleMatrix.random(depth, inputs).toArray2();
 	}
-
+	
+	/**
+	 * Standard linear layer activation function. Each output has a weight to each input and the value of the output is
+	 * the sum of all of the input values times each of their weights.
+	 * <br><br>
+	 * Does not use EJML internally because I found that to be slower than the naive implementation.
+	 * @param input The input to this layer (ignored. Just uses the last layer's {@link Layer#getLastActivation() getLastActivation()} function)
+	 * @param isInference Whether or not the model is performing inference (no effect).
+	 * @return This layer's activation.
+	 */
 	@Override
-	public float[][] activation(float[][] input) {
-		input = lastLayer.getLastActivation();
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		masks = lastLayer.getMasks();//Pulls the last layer's masks forward.
 		
-		weightedInputs = new float[outputs][depth];
-		for(int d = 0; d < depth; d++)
+		/*
+		 * This is just the naive linear layer activation. If you understand how that works, you should understand this.
+		 */
+		double[][] in = lastLayer.getLastActivation().toArray2();
+		double[][] weightedInputs = new double[outputs][depth];
+		for(int o = 0; o < outputs; o++)
 		{
-			for(int i = 0; i < outputs; i++)
+			for(int d = 0; d < depth; d++)
 			{
-				for(int j = 0; j < inputs; j++)
+				weightedInputs[o][d] = biases[o][d];
+				for(int i = 0; i < inputs; i++)
 				{
-					weightedInputs[i][d] += weights[i][d][j] * input[j][d];
+					weightedInputs[o][d] += weights[o][d][i] * in[i][d];
 				}
-				weightedInputs[i][d] += biases[i][d];
 			}
 		}
-		lastActivation = activation.activation(weightedInputs);
+		this.weightedInputs = new SimpleMatrix(weightedInputs);
+		lastActivation = activation.activation(this.weightedInputs);
 		return lastActivation;
 	}
 	
+	/**
+	 * Performs backprop on this layer. The layer(s) that follow this layer should have reported their
+	 * gradients to this layer using {@link #reportGradient(SimpleMatrix)}. It uses the same function to report
+	 * its gradient to its preceding layer.
+	 * <br><br>
+	 * Does not use EJML internally because I found that to be slower.
+	 */
 	@Override
 	public void backprop()
 	{
-		float[][] nextErrorWeighted = getGradient();
-		clearGradients();
+		SimpleMatrix nextErrorWeighted = getGradient();//Gets the next gradient
+		clearGradients();//Clears its internal record of the gradients so that this backprop's gradients don't affect the next
 		
-		float[][] error = activation.error(weightedInputs, nextErrorWeighted);
-		//System.out.println(LayersMain.arrayToString(error));
-		float[][] thisErrorWeighted = new float[inputs][depth];
+		double[][] error = activation.error(weightedInputs, nextErrorWeighted).toArray2();//Pulls the gradient through the activation function.
+
+		double[][] thisErrorWeighted = new double[inputs][depth];//Matrix for the error of the inputs to this layer.
 		for(int d = 0; d < depth; d++)
 		{
-			for(int i = 0; i < outputs; i++)
+			for(int o = 0; o < outputs; o++)
 			{
-				for(int j = 0; j < inputs; j++)
+				double thisError = error[o][d] * model.getLearningRate();//Scales the output error by the LR (so we don't do this same calculation for each input)
+				biases[o][d] -= thisError;//Updates the biases
+				for(int i = 0; i < inputs; i++)
 				{
-					thisErrorWeighted[j][d]  += weights[i][d][j] * error[i][d];
-					weights[i][d][j] -= lastLayer.getLastActivation()[j][d] * error[i][d] * model.getLearningRate();
+					thisErrorWeighted[i][d] += weights[o][d][i] * error[o][d];//Pulls the error through the weights
+					weights[o][d][i] -= lastLayer.getLastActivation().get(i, d) * thisError;//Updates the  weights
 				}
-				biases[i][d] -= error[i][d] * model.getLearningRate();
 			}
 		}
 		
-		lastLayer.reportGradient(thisErrorWeighted);
+		lastLayer.reportGradient(new SimpleMatrix(thisErrorWeighted));//Pass the gradient down to the last layer.
 	}
 	
 	@Override
@@ -99,25 +119,127 @@ public class StandardLayer extends Layer{
 	}
 	
 	@Override
-	public String toString() {
-		//String out = outputs + " x " + inputs + "\n";
-		//out += LayersMain.floatMatrixToString(weights, 2);
-		//return out;
-		
+	public String toString() {		
 		return "Standard [" + activation.name() + "] (" + outputs + ", " + depth + ")";
 	}
 	
-	public void initHe()
-	{
+	/**
+	 * Uses He initialization to initialize the weights (just keeps the biases as zero). That is, inits the weights so that their mean is
+	 * zero and their variance is 2/the number of inputs.
+	 * <br><br>
+	 * I use this over just random initialization, because with large input dims, random init tends to cause activations with very
+	 * large magnitudes, which have the potential to cause overflows. 
+	 * 
+	 * @author C. Cooper
+	 * @author ChatGPT
+	 */
+	private void initHe()
+	{		
+		//The code for generating a random number w/ given variance and mean comes from ChatGPT
 		double desiredVariance = 2d / inputs;
         double desiredStdDev = Math.sqrt(desiredVariance);
 
         Random random = new Random();
-        double mean = 0f;
+        double mean = 0d;
 
-        for(int i = 0; i < outputs; i++)
-        	for(int j = 0; j < depth; j++)
-        		for(int k = 0; k < inputs; k++)
-        			weights[i][j][k] = (float) (mean + desiredStdDev * random.nextGaussian());
+        weights = new double[outputs][depth][inputs];
+        
+    	for(int o = 0; o < outputs; o++)
+    		for(int d = 0; d < depth; d++)
+    			for(int i = 0; i < inputs; i++)
+    				weights[o][d][i] = mean + desiredStdDev * random.nextGaussian();	
+	}
+	
+	@Override
+	public String className() {
+		return "Standard";
+	}
+	
+	@Override
+	public String stringify()
+	{
+		/*
+		 * Creates a String with the form:
+		 * thisId lastId inputCount outputCount depth activationName
+		 * bias[0][0] weight[0][0][0] weight[0][0][1]...bias[0][1] weight[0][1][0] weight[0][1][1]...weight[0][depth-1][inputCount-1]
+		 * bias[1][0] weight[1][0][0] weight[1][0][1]...bias[1][1] weight[1][1][0] weight[1][1][1]...weight[1][depth-1][inputCount-1]
+		 */
+		String out = getId() + " " + lastLayer.getId() + " " + inputs  + " " + outputs + " " + depth + " " + activation.name() +"\n";
+		for(int o = 0; o < outputs; o++)
+		{
+			for(int d = 0; d < depth; d++)
+			{
+				out += biases[o][d] + " ";
+				for(int i = 0; i < inputs; i++)
+				{
+					out += weights[o][d][i] + " ";
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+
+	/**
+	 * Loads a StandardLayer based on a string produced by {@link #stringify()}.
+	 * @param string A string produced by {@link #stringify()}.
+	 * @param model The model this layer belongs to.
+	 * @param position The position of this layer in the model (not used).
+	 * @return An AttentionLayer based on the given String.
+	 */
+	public static StandardLayer load(String string, LayersModel model, int position) {
+		StandardLayer out;
+
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastID = scanner.nextInt();
+		int inputs = scanner.nextInt();
+		int outputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		String activation = scanner.next();
+		Activation activation2 = getActivation(activation);
+		out = new StandardLayer(model.getLayerByID(lastID), outputs, activation2);
+		
+		for(int o = 0; o < outputs; o++)
+		{
+			for(int d = 0; d < depth; d++)
+			{
+				out.biases[o][d] = scanner.nextDouble();
+				for(int i = 0; i < inputs; i++)
+				{
+					out.weights[o][d][i] = scanner.nextDouble();
+				}
+			}
+		}
+		
+		scanner.close();
+		
+		out.setId(id);
+		
+		return out;
+	}
+	
+	/**
+	 * Given a String, returns the {@link Activation} with that name.
+	 * @param name The name of the activation.
+	 * @return The activation with the given name.
+	 * @throws IllegalArgumentException If there is no Activation with that name.
+	 */
+	static Activation getActivation(String name)
+	{
+		switch(name){
+		case "Softmax":
+			return Activation.SOFTMAX;
+		case "Softmax_Depthwise":
+			return Activation.SOFTMAX_DEPTHWISE;
+		case "ReLU":
+			return Activation.RELU;
+		case "Sigmoid":
+			return Activation.SIGMOID;
+		case "None":
+			return Activation.NONE;
+		default:
+			throw new IllegalArgumentException("Unknown Activation: " + name);
+		}
 	}
 }

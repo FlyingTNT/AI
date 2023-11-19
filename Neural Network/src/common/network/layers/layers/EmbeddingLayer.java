@@ -1,125 +1,103 @@
 package common.network.layers.layers;
 
-import java.util.Arrays;
-import java.util.Random;
+import java.util.Scanner;
 
-import common.network.layers.LayersMain;
+import org.ejml.simple.SimpleMatrix;
 
+import common.network.layers.models.LayersModel;
+
+/**
+ * A basic token embedding layer. Takes the input, casts it to ints, and outputs the embedding vector for each int.
+ * @author C. Cooper
+ */
 public class EmbeddingLayer extends Layer {
 
-	float[][] embeddings;
-	int vocabSize;
-	int[] lastInputs;
-	boolean masking;
-	final boolean[] TRUE;
-	final boolean[] FALSE;
-	final float[] MASK;
-	
-	public EmbeddingLayer(int inputs, int embeddingDepth, int vocabSize, boolean masking) {
-		super(inputs, inputs);
-		this.vocabSize = vocabSize;
-		this.depth = embeddingDepth;
-		embeddings = new float[vocabSize][embeddingDepth];
-		lastInputs = new int[inputs];
-		this.masking = masking;
-		
-		FALSE = new boolean[depth];
-		boolean[] tr = new boolean[depth];
-		Arrays.fill(tr, true);
-		TRUE = tr;
-		float[] mk = new float[depth];
-		Arrays.fill(mk, Float.NEGATIVE_INFINITY);
-		MASK = mk;
-		init();
-	}
+	SimpleMatrix embeddings;//The matrix of embeddings (each row is the embedding vector of the token that == its index)
+	int vocabSize;//The number of tokens in the vocab (the number of embedding vectors this layer needs)
+	int[] lastInputs;//The tokens of the last activation
+	boolean masking;//Whether to do masking
+	final SimpleMatrix none;//The embed vector for -1 (pad token) (just all zeros)
 
+	/**
+	 * Constructor for EmbeddingLayer.
+	 * @param last The layer that precedes this layer.
+	 * @param embeddingDepth The size of the embedding vectors.
+	 * @param vocabSize The number of tokens in the vocab.
+	 * @param masking Whether to do masking.
+	 */
 	public EmbeddingLayer(Layer last, int embeddingDepth, int vocabSize, boolean masking) {
 		super(last, last.outputs);
 		this.vocabSize = vocabSize;
 		this.depth = embeddingDepth;
-		embeddings = new float[vocabSize][embeddingDepth];
+		setGradientSize(inputs, embeddingDepth);
+		embeddings = new SimpleMatrix(vocabSize, embeddingDepth);
 		lastInputs = new int[inputs];
 		this.masking = masking;
-		
-		FALSE = new boolean[depth];
-		boolean[] tr = new boolean[depth];
-		Arrays.fill(tr, true);
-		TRUE = tr;
-		float[] mk = new float[depth];
-		Arrays.fill(mk, Float.NEGATIVE_INFINITY);
-		MASK = mk;
+		none = new SimpleMatrix(1, embeddingDepth);
 		init();
 	}
 	
-	public void init()
+	/**
+	 * Initializes the lastActivation and sets the embedding vectors to random numbers -1-1
+	 */
+	private void init()
 	{
-		Random random = new Random();
-		for(int i = 0; i < vocabSize; i++)
-		{
-			for(int j = 0; j <  depth; j++)
-			{
-				embeddings[i][j] = random.nextFloat();
-				if(embeddings[i][j] == 0)embeddings[i][j] = 1;
-			}
-		}
+		lastActivation = new SimpleMatrix(outputs, depth);
+		embeddings = SimpleMatrix.random(vocabSize, depth).minus(0.5).scale(2);//Random is 0-1. -0.5 -> -0.5-0.5, *2 -> -1-1 
 	}
 
 	@Override
-	public float[][] activation(float[][] input) {
-		input = lastLayer.getLastActivation();
-		float[][] out = new float[inputs][depth];
+	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {
+		input = lastLayer.getLastActivation();//Gets the last layer's activation
 		
-		//System.out.println("Embedding:");
-		//LayersMain.print(embeddings);
-		
-		for(int i = 0; i < inputs; i++)
+		for(int i = 0; i < inputs; i++)//For each token in the input
 		{
+<<<<<<< HEAD
 			int embedding = (int)input[i][0];
 			lastInputs[i] = embedding;
 			///*
 			if(masking)
+=======
+			int embedding = (int)input.get(i, 0);//Casts it to an int to get the token
+			lastInputs[i] = embedding;//Adds the token to the last inputs
+			
+			if(embedding == -1)//If this is a padding token,
+>>>>>>> refs/remotes/origin/ejml
 			{
-				if(embedding == -1)
-				{
-					out[i] = embeddings[0];
-					masks[i] = TRUE;
-					continue;
-				}
-				masks[i] = FALSE;
-			}//*/
-			else {
-				if(embedding == -1)
-				{
-					out[i] = embeddings[0];
-					continue;
-				}
+				lastActivation.setRow(i, none);//Sets the last activation at this position to all zeroes
+				if(masking)//If we're doing masking,
+					masks[i] = true;//Sets the masks at this position to true
+				continue;//Moves on to the next token
 			}
+<<<<<<< HEAD
 			if(embedding < 0 || embedding >= vocabSize)
+=======
+			
+			masks[i] = false;//Sets to mask i to false.
+			
+			if(embedding < 0 || embedding >= vocabSize)//If the token is out of the vocab,
+>>>>>>> refs/remotes/origin/ejml
 			{
 				throw new IndexOutOfBoundsException("Embedding index is out of range!");
 			}
-			out[i] = embeddings[embedding];
+			lastActivation.setRow(i, embeddings.getRow(embedding));//Inserts the embedding vector of the token into the activation matrix.
 		}
-		lastActivation = out;
-		return out;
+		return lastActivation;
 	}
 
-	@Override//VERIFIED
+	@Override
 	public void backprop() {
-		float[][] nextErrorWeighted = getGradient();	
+		SimpleMatrix nextErrorWeighted = getGradient();//Gets the gradient.
 		clearGradients();
-		for(int i = 0; i < inputs; i++)
+		for(int i = 0; i < inputs; i++)//For each input,
 		{
-			for(int j = 0; j < depth; j++)
-			{
-				if(nextErrorWeighted[i][j] > 20 || nextErrorWeighted[i][j] < -20)
-				{
-					i=i;
-				}
-				embeddings[lastInputs[i] ][j] -= nextErrorWeighted[i][j] * model.getLearningRate();
-			}
+			if(lastInputs[i] == -1)//If its token was -1, skips it.
+				continue;
+			/*
+			 * Subtracts the error corresponding to this input from the embedding vector of the token for this input.
+			 */
+			embeddings.setRow(lastInputs[i], embeddings.getRow(lastInputs[i]).minus(nextErrorWeighted.getRow(i).scale(model.getLearningRate())));
 		}
-		//System.out.println(LayersMain.floatMatrixToString(embeddings, 2));
 	}
 
 	@Override
@@ -134,5 +112,58 @@ public class EmbeddingLayer extends Layer {
 	
 	public void setMasking(boolean masking) {
 		this.masking = masking;
+	}
+	
+	@Override
+	public String stringify() {
+		/*
+		 * Returns a string in the form:
+		 * thisId LastId inputs embedDepth vocabSize doMasking
+		 * token 0 embed vector
+		 * token 1 embed vector
+		 * ...
+		 */
+		StringBuilder out = new StringBuilder();
+		out.append(getId() + " " + lastLayer.getId() + " " + inputs + " " + depth + " " + vocabSize + " " + masking + "\n");
+		for(int i = 0; i < vocabSize; i++)
+		{
+			for(int j = 0; j < depth; j++)
+			{
+				out.append(embeddings.get(i, j) + " ");
+			}
+			out.append("\n");
+		}
+		return out.toString();
+	}
+
+	/**
+	 * Loads an EmmbeddingLayer based on a string produced by {@link #stringify()}.
+	 * @param string A string produced by {@link #stringify()}.
+	 * @param model The model this layer belongs to.
+	 * @param position The position of this layer in the model (not used).
+	 * @return An AttentionLayer based on the given String.
+	 */
+	public static EmbeddingLayer load(String string, LayersModel model, int position) {
+		Scanner scanner = new Scanner(string);
+		int id = scanner.nextInt();
+		int lastId = scanner.nextInt();
+		int inputs = scanner.nextInt();
+		int depth = scanner.nextInt();
+		int vocabSize = scanner.nextInt();
+		boolean masking = scanner.nextBoolean();
+		EmbeddingLayer out = new EmbeddingLayer(model.getLayerByID(lastId), depth, vocabSize, masking);
+		for(int i = 0; i < vocabSize; i++)
+		{
+			for(int j = 0; j < depth; j++)
+			{
+				out.embeddings.set(i, j, scanner.nextDouble());
+			}
+		}
+		
+		scanner.close();
+		
+		out.setId(id);
+		
+		return out;
 	}
 }
