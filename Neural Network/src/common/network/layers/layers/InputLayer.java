@@ -15,6 +15,12 @@ public class InputLayer extends Layer{
 	public InputLayer(int inputs) {
 		super(inputs, inputs);
 	}
+	
+	public InputLayer(int inputs, int depth) {
+		super(inputs, inputs);
+		this.depth = depth;
+		setGradientSize(inputs, depth);
+	}
 
 	@Override
 	public SimpleMatrix activation(SimpleMatrix input, boolean isInference) {

@@ -34,6 +34,16 @@ public class TransformerInput extends Layer {
 		positionalEncoding = new PositionalEncoding(embedding);//Adds positional encoding to the embed layer.
 	}
 	
+	public TransformerInput(int sequenceLength, int[] embeddingDepths, int totalEmbeddingDepth, int[] vocabSizes)
+	{
+		super(sequenceLength, sequenceLength);
+		depth = totalEmbeddingDepth;
+		
+		input = new InputLayer(sequenceLength, vocabSizes.length);
+		embedding = (embeddingDepths == null && vocabSizes.length == 1) ? new EmbeddingLayer(input, totalEmbeddingDepth, vocabSizes[0], true) : new EmbeddingLayer2D(input, embeddingDepths, totalEmbeddingDepth, vocabSizes, true);
+		positionalEncoding = new PositionalEncoding(embedding);
+	}
+	
 	/**
 	 * More low-level constructor used in the {@link #load(String, LayersModel, int)} function.
 	 * @param inputLayer This layer's internal InputLayer
@@ -112,7 +122,7 @@ public class TransformerInput extends Layer {
 	
 	@Override
 	public String stringify() {
-		return getId() + " " + input.getId() + " " + positionalEncoding.getId() + " " + inputs + " " + embedding.depth + " " + embedding.vocabSize + "\n" + embedding.stringify();
+		return getId() + " " + input.getId() + " " + positionalEncoding.getId() + " " + inputs + " " + (embedding instanceof EmbeddingLayer2D) + "\n" + embedding.stringify();
 	}
 	
 	public static TransformerInput load(String string, LayersModel model, int position) {
@@ -121,8 +131,7 @@ public class TransformerInput extends Layer {
 		int inputId = scanner.nextInt();
 		int positionalId = scanner.nextInt();
 		int inputs = scanner.nextInt();
-		int depth = scanner.nextInt();
-		int vocabSize = scanner.nextInt();
+		boolean is2D = scanner.nextBoolean();
 		StringBuilder builder = new StringBuilder();
 		while(scanner.hasNextLine())
 			builder.append(scanner.nextLine() + "\n");
@@ -130,7 +139,7 @@ public class TransformerInput extends Layer {
 		InputLayer inputLayer = new InputLayer(inputs);
 		inputLayer.setId(inputId);
 		inputLayer.setModel(model);
-		EmbeddingLayer embedding = EmbeddingLayer.load(builder.toString(), model, -1);
+		EmbeddingLayer embedding = is2D ? EmbeddingLayer2D.load(builder.toString(), model) : EmbeddingLayer.load(builder.toString(), model, -1);
 		embedding.setModel(model);
 		PositionalEncoding encoding = new PositionalEncoding(embedding);
 		encoding.setId(positionalId);

@@ -94,11 +94,6 @@ public class EmbeddingLayer extends Layer {
 		return "Embedding";
 	}
 	
-	@Override
-	public String toString() {
-		return name() + " (" + inputs + ", "+ depth + ")";
-	}
-	
 	public void setMasking(boolean masking) {
 		this.masking = masking;
 	}
