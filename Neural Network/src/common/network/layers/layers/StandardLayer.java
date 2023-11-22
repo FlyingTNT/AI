@@ -31,7 +31,6 @@ public class StandardLayer extends Layer{
 		super(inputLayer, outputs);
 		depth = inputLayer.depth;
 		biases = new double[outputs][depth];
-		weights = new double[outputs][depth][inputs];
 		this.activation = activation;
 		initHe();//Initializes the weights using He initialization. See the method doc for why.
 	}

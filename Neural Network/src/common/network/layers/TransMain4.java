@@ -15,9 +15,12 @@ public class TransMain4 {
 	static int DECODER_SEQUENCE_LENGTH = 716;
 	static float LEARNING_RATE = 0.0005f;
 	
+	static String DATA_FOLDER =  "C:\\AIClub\\Code\\Large Dataset\\Tokenized2";
+	
 	public static void main(String[] args) {
+		DatasetLoader.loadSubmissions2d(DATA_FOLDER);
+		System.out.println("Loaded");
 		TransformerModel2D model = new TransformerModel2D(LEARNING_RATE, ENCODER_SEQUENCE_LENGTH, DECODER_SEQUENCE_LENGTH, null, new int[] {TOKEN_EMBED_DEPTH, TYPE_EMBED_DEPTH}, EMBED_DEPTH, new int[] {ENCODER_VOCAB_SIZE}, new int[] {DECODER_VOCAB_SIZE, DECODER_TYPE_SIZE}, HEADS, 6);
-		
 	}
 
 }
