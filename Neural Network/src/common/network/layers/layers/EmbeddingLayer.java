@@ -67,7 +67,7 @@ public class EmbeddingLayer extends Layer {
 			
 			if(embedding < 0 || embedding >= vocabSize)//If the token is out of the vocab,
 			{
-				throw new IndexOutOfBoundsException("Embedding index is out of range!");
+				throw new IndexOutOfBoundsException("Embedding index is out of range: " + embedding + "!");
 			}
 			lastActivation.setRow(i, embeddings.getRow(embedding));//Inserts the embedding vector of the token into the activation matrix.
 		}

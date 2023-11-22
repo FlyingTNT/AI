@@ -16,8 +16,8 @@ import common.network.layers.models.LayersModel;
 public class StandardLayer extends Layer{
 
 	Activation activation;//The activation function to apply
-	double[][][] weights;//The array of weights [outputs][depth][inputs]
-	double[][] biases;//The array of biases [outputs][depth]
+	float[][][] weights;//The array of weights [outputs][depth][inputs]
+	float[][] biases;//The array of biases [outputs][depth]
 	
 	private SimpleMatrix weightedInputs;//The weighted inputs to the last activation. This is a SimpleMatrix b/c the activation functions take in SimpleMatricies
 	
@@ -30,7 +30,7 @@ public class StandardLayer extends Layer{
 	public StandardLayer(Layer inputLayer, int outputs, Activation activation) {
 		super(inputLayer, outputs);
 		depth = inputLayer.depth;
-		biases = new double[outputs][depth];
+		biases = new float[outputs][depth];
 		this.activation = activation;
 		initHe();//Initializes the weights using He initialization. See the method doc for why.
 	}
@@ -40,9 +40,9 @@ public class StandardLayer extends Layer{
 	 */
 	public void init()
 	{
-		biases = SimpleMatrix.random(outputs, depth).toArray2();
+		biases = toFloat(SimpleMatrix.random(outputs, depth).toArray2());
 		for(int i = 0; i < outputs; i++)
-			weights[i] = SimpleMatrix.random(depth, inputs).toArray2();
+			weights[i] = toFloat(SimpleMatrix.random(depth, inputs).toArray2());
 	}
 	
 	/**
@@ -141,12 +141,12 @@ public class StandardLayer extends Layer{
         Random random = new Random();
         double mean = 0d;
 
-        weights = new double[outputs][depth][inputs];
+        weights = new float[outputs][depth][inputs];
         
     	for(int o = 0; o < outputs; o++)
     		for(int d = 0; d < depth; d++)
     			for(int i = 0; i < inputs; i++)
-    				weights[o][d][i] = mean + desiredStdDev * random.nextGaussian();	
+    				weights[o][d][i] = (float) (mean + desiredStdDev * random.nextGaussian());	
 	}
 	
 	@Override
@@ -203,10 +203,10 @@ public class StandardLayer extends Layer{
 		{
 			for(int d = 0; d < depth; d++)
 			{
-				out.biases[o][d] = scanner.nextDouble();
+				out.biases[o][d] = scanner.nextFloat();
 				for(int i = 0; i < inputs; i++)
 				{
-					out.weights[o][d][i] = scanner.nextDouble();
+					out.weights[o][d][i] = scanner.nextFloat();
 				}
 			}
 		}
@@ -240,5 +240,14 @@ public class StandardLayer extends Layer{
 		default:
 			throw new IllegalArgumentException("Unknown Activation: " + name);
 		}
+	}
+	
+	static float[][] toFloat(double[][] array)
+	{
+		float[][] out = new float[array.length][array[0].length];
+		for(int i = 0; i < array.length; i++)
+			for(int j = 0; j < array[0].length; j++)
+				out[i][j] = (float)array[i][j];
+		return out;
 	}
 }

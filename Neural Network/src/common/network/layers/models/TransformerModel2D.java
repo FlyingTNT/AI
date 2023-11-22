@@ -72,18 +72,24 @@ public class TransformerModel2D extends LayersModel{
 			this.decoderVocabSizes[i] += 2;
 		
 		encoderIn = new TransformerInput(encoderSequenceLength, encoderEmbeddingDepths, totalEmbeddingDepth, encoderVocabSizes);
+		System.out.println("Ein");
 		decoderIn = new TransformerInput(decoderSequenceLength, decoderEmbeddingDepths, totalEmbeddingDepth, this.decoderVocabSizes);
+		System.out.println("Din");
 		
 		encoders = new Encoder[layers];
 		decoders = new Decoder[layers];
 		
 		encoders[0] = new Encoder(encoderIn, heads, true);
+		System.out.println("E0");
 		decoders[0] = new Decoder(decoderIn, encoders[0], heads, true, true);
+		System.out.println("D0");
 		
 		for(int i = 1; i < layers; i++)
 		{
 			encoders[i] = new Encoder(encoders[i-1], heads, true);
+			System.out.println("E" + i);
 			decoders[i] = new Decoder(decoders[i-1], encoders[i], heads, false, true);
+			System.out.println("D" + i);
 		}
 		
 		rotate = new RotationLayer(decoders[decoders.length - 1]);
@@ -168,6 +174,7 @@ public class TransformerModel2D extends LayersModel{
 		float costSum = 0;
 		for(int i = 0; i < trainingSet.length; i++)//For each item in the training set,
 		{
+			System.out.print("\r" + i + "/" + trainingSet.length);
 			encoderIn.activation(trainingSet[i][0], false);//Activates the encoder input on the training set's input
 			decoderIn.activation(shift(trainingSet[i][1], BOS), false);//Activates the decoder input on the training set's target (shifted right with the BOS token)
 			//System.out.println("Decoder In:");
