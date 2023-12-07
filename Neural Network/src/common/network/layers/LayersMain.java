@@ -10,6 +10,8 @@ import org.ejml.simple.SimpleMatrix;
 import common.network.layers.layers.EmbeddingLayer;
 import common.network.layers.layers.FlattenLayer;
 import common.network.layers.layers.InputLayer;
+import common.network.layers.layers.NormLayer;
+import common.network.layers.layers.ResidualAddition;
 import common.network.layers.layers.RotationLayer;
 import common.network.layers.layers.StandardLayer;
 import common.network.layers.models.LayersModel;
@@ -67,8 +69,13 @@ public class LayersMain {
         InputLayer softIn = new InputLayer(1);
         EmbeddingLayer softMid = new EmbeddingLayer(softIn, 4, 4, false);
         //RotationLayer softFlat = new RotationLayer(softMid);
-        StandardLayer softOut = new StandardLayer(softMid, 1, Activation.SOFTMAX_DEPTHWISE);
-        softModel = new LayersModel(0.10f, Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY, softIn, softMid, softOut);
+        StandardLayer softMid2 = new StandardLayer(softMid, 10, Activation.NONE);
+        NormLayer norm1 = new NormLayer(softMid2);
+        StandardLayer softMid3 = new StandardLayer(norm1, 10, Activation.NONE);
+        ResidualAddition residual2 = new ResidualAddition(norm1, softMid3);
+        NormLayer norm2 = new NormLayer(residual2);
+        StandardLayer softOut = new StandardLayer(norm2, 1, Activation.SOFTMAX_DEPTHWISE);
+        softModel = new LayersModel(0.10f, Cost.SPARSE_CATEGORICAL_CROSS_ENTROPY, softIn, softMid, softMid2, norm1, softMid3, residual2, norm2, softOut);
         
         System.out.println(softModel);
 		
