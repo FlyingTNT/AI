@@ -96,23 +96,14 @@ public interface Activation {
 			SimpleMatrix softmax = activation(input);
 			SimpleMatrix error = softmax.elementMult(nextWeightedError);
 			
-			float[][] out = new float[input.getNumRows()][input.getNumCols()];
-			for(int d = 0; d < input.getNumCols(); d++)
-				for(int output = 0; output < input.getNumRows(); output++)
-				{
-					for(int in = 0; in < input.getNumRows(); in++)
-					{
-						//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Soft(i) * ((i==j?1:0) - Soft(j));
-						if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
-						{
-							out[in][d] += (1 - softmax.get(in, d)) * error.get(output, d);//error(out, d) = soft(out, d) * nextError(out, d)
-						}else {
-							out[in][d] += -softmax.get(in, d)* error.get(output, d);//error(out, d) = soft(out, d) * nextError(out, d)
-						}
-					}
-				}
+			SimpleMatrix out = softmax.copy();
+			for(int i = 0; i < input.getNumCols(); i++)
+			{
+				double sum = error.getColumn(i).elementSum();
+				out.setColumn(i, softmax.getColumn(i).scale(-sum));
+			}
 			
-			return new SimpleMatrix(out);
+			return out.plus(error);
 		}
 		
 		@Override
@@ -158,23 +149,14 @@ public interface Activation {
 			SimpleMatrix softmax = activation(input);
 			SimpleMatrix error = softmax.elementMult(nextWeightedError);
 			
-			float[][] out = new float[input.getNumRows()][input.getNumCols()];
-			for(int w = 0; w < input.getNumRows(); w++)
-				for(int output = 0; output < input.getNumCols(); output++)
-				{
-					for(int in = 0; in < input.getNumCols(); in++)
-					{
-						//DERIVATIVE OF iTH OUTPUT WITH RESPECT TO jTH INPUT = Sig(i) * ((i==j?1:0) - Sig(j));
-						if(in == output)//COMPUTING THE PARTIAL FOR EACH INPUT
-						{
-							out[w][in] += (1 - softmax.get(w, in)) * error.get(w, output);//Error(w, out) = soft(w, out) * nextError(w, out)
-						}else {
-							out[w][in] += -softmax.get(w, in)* error.get(w, output);//Error(w, out) = soft(w, out) * nextError(w, out)
-						}
-					}
-				}
+			SimpleMatrix out = softmax.copy();
+			for(int i = 0; i < input.getNumRows(); i++)
+			{
+				double sum = error.getRow(i).elementSum();
+				out.setRow(i, softmax.getRow(i).scale(-sum));
+			}
 			
-			return new SimpleMatrix(out);
+			return out.plus(error);
 		}
 		
 		@Override
@@ -196,7 +178,7 @@ public interface Activation {
 			 * all of the values could be -Infinity, which would cause an error.
 			 */
 			for(int i = 0; i < values.getNumRows(); i++)
-				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 0));
+				exps.setRow(i, Double.isFinite(maxes[i]) ? exps.getRow(i).divide(exps.getRow(i).elementSum()) : SimpleMatrix.filled(1, values.getNumCols(), 1d/values.getNumCols()));
 			return exps;
 		}
 		
